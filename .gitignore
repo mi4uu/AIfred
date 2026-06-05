@@ -1,0 +1,24 @@
+# secrets — V8: never commit secret values
+.env
+*.token.json
+*_token.json
+*_secret.json
+.google_oauth_state.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# data store (I.store sqlite scratch)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# web build
+web/node_modules/
+web/dist/

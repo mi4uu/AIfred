@@ -1,0 +1,19 @@
+[Unit]
+Description=AIfred personal assistant (web + telegram)
+After=network-online.target
+Wants=network-online.target
+# ollama runs as its own service; AIfred degrades gracefully if it is down
+After=ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/mi4u/AIfred
+ExecStart=/usr/bin/uv run aifred-service
+Restart=always
+RestartSec=5
+# uv needs HOME; ollama/brain reached over localhost+https
+Environment=HOME=/home/mi4u
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/mi4u/.local/bin
+
+[Install]
+WantedBy=default.target
