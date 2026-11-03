@@ -10,6 +10,7 @@ If AIFRED_WEB_TOKEN is set it's required on every /api/* call.
 
 from __future__ import annotations
 
+import hmac
 import json
 import queue
 import threading
@@ -60,7 +61,7 @@ def make_api(
     router = APIRouter(prefix="/api")
 
     def auth(x_aifred_token: str = Header(default="")) -> None:
-        if web_token and x_aifred_token != web_token:
+        if web_token and not hmac.compare_digest(x_aifred_token, web_token):
             raise HTTPException(status_code=401, detail="bad token")
 
     def _need_store() -> Any:

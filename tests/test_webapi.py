@@ -35,6 +35,9 @@ def test_auth_required_when_token_set(monkeypatch):
     assert c.post("/api/chat", json={"message": "hi"}).status_code == 401
     ok = c.post("/api/chat", json={"message": "hi"}, headers={"X-AIfred-Token": "secret"})
     assert ok.status_code == 200
+    # same length, wrong value: constant-time compare still rejects it
+    wrong = c.post("/api/chat", json={"message": "hi"}, headers={"X-AIfred-Token": "xxxxxx"})
+    assert wrong.status_code == 401
     get_settings.cache_clear()
 
 

@@ -11,10 +11,18 @@ run needs re-auth via authorize() to add gmail.readonly. Detection: scopes_ok
 from __future__ import annotations
 
 import json
+import stat
 from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+
+
+def _write_secret(path: str | Path, content: str) -> None:
+    """Write a token/state file readable by the owner only (contains OAuth secrets)."""
+    p = Path(path)
+    p.write_text(content)
+    p.chmod(stat.S_IRUSR | stat.S_IWUSR)
 
 # V4: read-only gmail. Calendar full (manage). Contacts read-only for identity
 # (name<->email/phone). No gmail.send here by design.
@@ -48,7 +56,7 @@ def load_credentials(token_path: str | Path) -> Credentials:
     creds = Credentials.from_authorized_user_info(info, SCOPES)
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
-        p.write_text(creds.to_json())
+        _write_secret(p, creds.to_json())
     return creds
 
 
@@ -62,7 +70,7 @@ def authorize(client_secret_path: str | Path, token_path: str | Path, port: int 
 
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secret_path), SCOPES)
     creds = flow.run_local_server(port=port)
-    Path(token_path).write_text(creds.to_json())
+    _write_secret(token_path, creds.to_json())
     return creds
 
 
@@ -86,7 +94,7 @@ def auth_url(client_secret_path: str | Path, state_path: str | Path) -> str:
     url, _state = flow.authorization_url(
         access_type="offline", prompt="consent", include_granted_scopes="true"
     )
-    Path(state_path).write_text(json.dumps({"code_verifier": flow.code_verifier}))
+    _write_secret(state_path, json.dumps({"code_verifier": flow.code_verifier}))
     return url
 
 
@@ -108,5 +116,5 @@ def exchange_code(client_secret_path: str | Path, state_path: str | Path, code_o
     flow.code_verifier = state["code_verifier"]
     flow.fetch_token(code=code)
     creds = flow.credentials
-    Path(token_path).write_text(creds.to_json())
+    _write_secret(token_path, creds.to_json())
     return creds

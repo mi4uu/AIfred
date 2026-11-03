@@ -1,10 +1,11 @@
 """T7 google auth tests. No network, scope gating only (V4, V9)."""
 
 import json
+import stat
 
 import pytest
 
-from aifred.google.auth import SCOPES, NeedsReauth, load_credentials, scopes_ok
+from aifred.google.auth import SCOPES, NeedsReauth, _write_secret, load_credentials, scopes_ok
 
 
 class FakeCreds:
@@ -47,3 +48,11 @@ def test_gmail_scope_is_readonly_not_send():
     # V4: read-only by default, no send scope baked in
     assert any("gmail.readonly" in s for s in SCOPES)
     assert not any("gmail.send" in s for s in SCOPES)
+
+
+def test_write_secret_sets_owner_only_permissions(tmp_path):
+    p = tmp_path / "token.json"
+    _write_secret(p, '{"token": "x"}')
+    mode = stat.S_IMODE(p.stat().st_mode)
+    assert mode == stat.S_IRUSR | stat.S_IWUSR
+    assert p.read_text() == '{"token": "x"}'
