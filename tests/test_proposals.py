@@ -86,6 +86,23 @@ def test_event_to_payload_default_end_rolls_over_midnight():
     assert ev["end"] == "2026-06-10T00:30:00+02:00"
 
 
+def test_event_to_payload_default_end_crosses_spring_forward_gap():
+    # Warsaw springs forward 02:00 -> 03:00 on 2026-03-29 (the 02:00-02:59
+    # wall-clock range doesn't exist). A start inside that gap must still
+    # get an end strictly after it: naive wall-clock + 1h would land the end
+    # just past the gap, where the UTC offset has already jumped by an hour
+    # too, cancelling the 1h and producing an identical instant.
+    from datetime import datetime
+
+    ev = event_to_payload(
+        {"summary": "W dziurze DST", "date": "2026-03-29", "all_day": False, "start_time": "02:00"},
+        "src", "",
+    )
+    start_dt = datetime.fromisoformat(ev["start"])
+    end_dt = datetime.fromisoformat(ev["end"])
+    assert end_dt > start_dt
+
+
 def test_extract_events_filters_bad():
     llm = FakeLLM([
         {"summary": "Dentysta", "date": "2026-06-09", "start_time": "16:40"},

@@ -73,16 +73,21 @@ def _rfc3339(date: str, hm: str) -> str:
 
 
 def _default_end(date: str, start_hm: str) -> tuple[str, str]:
-    """1-hour default duration when the model gave no end_time. Uses real
-    datetime arithmetic so a late start (e.g. 23:30) rolls the date forward
-    instead of wrapping the clock back to a time before the start."""
+    """1-hour default duration when the model gave no end_time. Adds the hour
+    to the start's UTC instant, then converts back to local wall-clock time,
+    so a start that lands in (or just before) a spring-forward DST gap still
+    gets an end that is a real hour later rather than the same instant the
+    naive wall-clock arithmetic would produce (adding 1h of wall-clock time
+    across the gap skips zero real hours, not one)."""
     from datetime import datetime, timedelta
 
+    from aifred.tz import get_timezone
+
     try:
-        start_dt = datetime.strptime(f"{date} {start_hm}", "%Y-%m-%d %H:%M")
+        start_dt = datetime.strptime(f"{date} {start_hm}", "%Y-%m-%d %H:%M").replace(tzinfo=get_timezone())
     except ValueError:
         return date, start_hm
-    end_dt = start_dt + timedelta(hours=1)
+    end_dt = (start_dt.astimezone(UTC) + timedelta(hours=1)).astimezone(get_timezone())
     return end_dt.strftime("%Y-%m-%d"), end_dt.strftime("%H:%M")
 
 
