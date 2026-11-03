@@ -1,4 +1,4 @@
-"""Daily journal skill (V2, V6, V12) — backed by brain.md folders.
+"""Daily journal skill (V2, V6, V12), backed by brain.md folders.
 
 Layout (matches existing vault):
   Journal/YYYY-MM-DD.md   user-facing daily log (append-only entries, V6)

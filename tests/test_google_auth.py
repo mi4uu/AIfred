@@ -1,4 +1,4 @@
-"""T7 google auth tests. No network — scope gating only (V4, V9)."""
+"""T7 google auth tests. No network, scope gating only (V4, V9)."""
 
 import json
 

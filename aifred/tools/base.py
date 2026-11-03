@@ -1,10 +1,10 @@
 """Tool = typed callable exposed to LLM as compact JSON schema (V10).
 
 Skill logic lives in the handler (code), NOT in prompt prose (V15). The model
-sees only {name, short description, params schema} — never instructions.
+sees only {name, short description, params schema}, never instructions.
 
 DESC_MAX caps description length so schemas stay compact (C7). Args validated
-by a pydantic model before the handler runs — bad model output fails loud (V9).
+by a pydantic model before the handler runs, bad model output fails loud (V9).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-DESC_MAX = 200  # keep tool descriptions terse — context budget (C7)
+DESC_MAX = 200  # keep tool descriptions terse, context budget (C7)
 
 
 class ToolError(Exception):
@@ -37,7 +37,7 @@ class Tool:
             raise ToolError(f"tool {self.name!r} description {len(self.description)} > {DESC_MAX} (C7)")
 
     def schema(self) -> dict[str, Any]:
-        """OpenAI tool-calling format. Compact — no prose body."""
+        """OpenAI tool-calling format. Compact, no prose body."""
         return {
             "type": "function",
             "function": {

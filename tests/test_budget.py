@@ -18,9 +18,9 @@ def test_trim_drops_oldest_middle():
     g = BudgetGuard(limit=30)  # ~120 chars budget
     messages = [
         msg("system", 20),
-        msg("user", 200),  # old, big — should drop
+        msg("user", 200),  # old, big, should drop
         msg("assistant", 20),
-        msg("user", 20),  # last — kept
+        msg("user", 20),  # last, kept
     ]
     out = g.trim(messages)
     assert out[0]["role"] == "system"  # system kept

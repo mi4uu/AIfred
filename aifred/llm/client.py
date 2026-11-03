@@ -1,6 +1,6 @@
 """LLM client. Ollama local first (I.model, C1). Cloud fallback opt-in (V1, C6).
 
-Uses ollama's NATIVE /api/chat (not /v1) so we can set think=false — qwen3.6's
+Uses ollama's NATIVE /api/chat (not /v1) so we can set think=false, qwen3.6's
 reasoning tokens otherwise dominate latency (16s vs 6s) and cause cloudflare
 502s. Budget guard applied before every send (C7). httpx.Client injectable.
 """
@@ -39,7 +39,7 @@ class LLMClient:
         self.guard = BudgetGuard(self.s.ctx_budget)
 
     def _options(self, temperature: float) -> dict[str, Any]:
-        """Sampling options (V28). num_ctx is critical — ollama's runtime default is
+        """Sampling options (V28). num_ctx is critical, ollama's runtime default is
         4096 and silently truncates longer prompts, which looks like the model
         'losing context'. Tuned values come from aifred/eval."""
         opts: dict[str, Any] = {

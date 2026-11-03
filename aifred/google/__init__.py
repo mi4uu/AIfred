@@ -1,4 +1,4 @@
-"""Google integration — OAuth (T7) + gmail/calendar tools (T8)."""
+"""Google integration, OAuth (T7) + gmail/calendar tools (T8)."""
 
 from aifred.google.auth import (
     SCOPES,

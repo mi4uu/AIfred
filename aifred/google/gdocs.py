@@ -1,7 +1,7 @@
 """Read Google Docs / Sheets / Slides links (V29).
 
 When a message or self-note contains a Google link, AIfred fetches the actual
-content via the Drive *export* endpoint (needs only drive.readonly — no separate
+content via the Drive *export* endpoint (needs only drive.readonly, no separate
 Sheets/Docs scope): Sheets -> CSV, Docs/Slides -> plain text. The text is then
 available to the agent (gdoc_read tool) and to the self-note event extractor, so
 events come from the real schedule, not just the chat line that linked it.
@@ -21,7 +21,7 @@ _EXPORT = {
     "document": "text/plain",
     "presentation": "text/plain",
 }
-MAX_CHARS = 4000  # keep retrieved content small — big context hurts (eval/V28)
+MAX_CHARS = 4000  # keep retrieved content small, big context hurts (eval/V28)
 
 
 def find_links(text: str) -> list[tuple[str, str]]:

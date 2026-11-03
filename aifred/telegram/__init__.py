@@ -1,4 +1,4 @@
-"""Telegram interface — allowed-users gate + agent routing."""
+"""Telegram interface, allowed-users gate + agent routing."""
 
 from aifred.telegram.bot import TelegramBot, parse_allowed_users
 

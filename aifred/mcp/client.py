@@ -16,7 +16,7 @@ PROTOCOL_VERSION = "2025-06-18"
 
 
 class McpError(Exception):
-    """MCP transport or JSON-RPC error — surfaced, never swallowed (V9)."""
+    """MCP transport or JSON-RPC error, surfaced, never swallowed (V9)."""
 
 
 def _parse_response(resp: httpx.Response) -> dict[str, Any]:

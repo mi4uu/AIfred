@@ -1,4 +1,4 @@
-"""Attention tool — let the agent read the triage output (what needs attention).
+"""Attention tool, let the agent read the triage output (what needs attention).
 
 Triage writes classified actionables to the store; without this tool the agent
 can't see them and falls back to brain.md (missing "buy X" / "pick up package"
@@ -17,7 +17,7 @@ _NUM = re.compile(r"\d{9,}")  # phone/jid-like runs in frozen triage text
 
 
 def _resolve_identities(text: str, contacts) -> str:
-    """Swap raw numbers in stored attention text for known names — fixes items
+    """Swap raw numbers in stored attention text for known names, fixes items
     triaged before the sender was linked (e.g. 48598765432 -> Kasia)."""
     if not contacts:
         return text

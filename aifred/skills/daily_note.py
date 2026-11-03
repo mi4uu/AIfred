@@ -1,10 +1,10 @@
-"""Daily note composer (V23) — a structured end-of-day summary in brain.md.
+"""Daily note composer (V23), a structured end-of-day summary in brain.md.
 
 Teaches AIfred what a good "notatka z dnia" looks like: code gathers the day's
 real signals (who wrote and what they wanted, what got done, what's still open,
 calendar, mail worth noting), and the LLM fills a FIXED Polish section template
 (code-first / LLM-last, V15). Empty sections are dropped. Owner's own messages
-(from_me) and undirected group chatter are excluded — same noise filter as triage.
+(from_me) and undirected group chatter are excluded, same noise filter as triage.
 
 The canonical template also lives in brain.md (Journal/_szablon-dzienny.md) so the
 agent can read the structure on demand; ensure_template() writes it once.
@@ -58,7 +58,7 @@ def _weekday_pl(day: str) -> str:
 
 
 def _norm_ts(ts: float) -> float:
-    """WhatsApp stores ms, mail/seconds — normalize to epoch seconds."""
+    """WhatsApp stores ms, mail/seconds, normalize to epoch seconds."""
     return ts / 1000.0 if ts > 1e12 else ts
 
 
@@ -74,7 +74,7 @@ def gather_day(store, contacts, day: str, limit: int = 800) -> dict:
     lo, hi = _day_bounds(day)
     convo: dict[str, list[str]] = {}
     for r in store.recent_messages("whatsapp", limit=limit):
-        if "from_me" in r and r["from_me"]:  # noqa: RUF019 — r is a sqlite3.Row, no .get()
+        if "from_me" in r and r["from_me"]:  # noqa: RUF019 -- r is a sqlite3.Row, no .get()
             continue
         ts = _norm_ts(r["ts"])
         if not (lo <= ts < hi):

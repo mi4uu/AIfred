@@ -1,4 +1,4 @@
-"""Eval harness scorers — deterministic, no ollama calls."""
+"""Eval harness scorers, deterministic, no ollama calls."""
 
 from aifred.eval.harness import parse_json
 from aifred.eval.score import score_extract, score_grounding, score_triage

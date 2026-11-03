@@ -1,7 +1,7 @@
 """Important-digest (V11, V15).
 
 Code aggregates compact structured signals from gmail + calendar + flagged
-whatsapp items (store). The LLM gets only this small digest object — never raw
+whatsapp items (store). The LLM gets only this small digest object, never raw
 mail bodies or message history (V11). Aggregation is pure code (V15).
 """
 

@@ -2,7 +2,7 @@
 
 Read-only PROPOSER: retrieves relevant brain.md chunks (V12), asks the LLM to
 extract candidate events, and stamps each with a source pointing back to the
-brain content (V3 — no invented events). It never writes the calendar itself;
+brain content (V3, no invented events). It never writes the calendar itself;
 execution goes through calendar_create (side-effecting, confirm-gated, V7).
 """
 

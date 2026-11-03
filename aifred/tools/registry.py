@@ -1,7 +1,7 @@
 """Tool registry. Holds tools; emits schemas; dispatches calls.
 
 subset() lets the intent router scope per-turn tools (V14) so the model never
-sees all tools at once — keeps schema payload small (C7).
+sees all tools at once, keeps schema payload small (C7).
 """
 
 from __future__ import annotations

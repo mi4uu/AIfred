@@ -1,6 +1,6 @@
 """Google OAuth (I.gmail, I.calendar, V4).
 
-Scopes: calendar read+write + gmail READ-ONLY (V4 — no send scope by default;
+Scopes: calendar read+write + gmail READ-ONLY (V4, no send scope by default;
 sending mail would need a separate explicit scope + confirm, T13/T15).
 
 Hermes token (~/.hermes/google_token.json) has calendar scope only, so first
@@ -27,7 +27,7 @@ SCOPES = [
 
 
 class NeedsReauth(Exception):
-    """Token missing required scopes — user must run `aifred google auth` (V9)."""
+    """Token missing required scopes, user must run `aifred google auth` (V9)."""
 
 
 def scopes_ok(creds: Credentials) -> bool:
@@ -79,7 +79,7 @@ def _flow(client_secret_path: str | Path):
 
 def auth_url(client_secret_path: str | Path, state_path: str | Path) -> str:
     """Return a consent URL. User opens it, approves, gets redirected to
-    http://localhost/?code=... (which won't load — that's fine); they copy the
+    http://localhost/?code=... (which won't load, that's fine); they copy the
     `code` and feed it to exchange_code(). PKCE verifier persisted to state_path.
     """
     flow = _flow(client_secret_path)

@@ -1,4 +1,4 @@
-"""Proactive triage engine — periodically decide what needs Owner's attention.
+"""Proactive triage engine, periodically decide what needs Owner's attention.
 
 Pulls only NEW mail + WhatsApp (cursors), resolves senders to known people
 (weight), and classifies importance in SMALL batches so nothing overflows the
@@ -25,7 +25,7 @@ log = logging.getLogger("aifred.triage")
 BATCH = 6           # items per LLM classification call (small = bounded ctx)
 SNIPPET_MAX = 180   # chars of body/snippet shown to the model
 CTX_LINES = 2        # preceding thread lines for a DIRECT chat (V19)
-GROUP_CTX_LINES = 6  # more for GROUPS — addressee is inferred from the flow (V38)
+GROUP_CTX_LINES = 6  # more for GROUPS, addressee is inferred from the flow (V38)
 MAIL_WINDOW = "newer_than:2d"
 NOISE = ("no-reply", "noreply", "no_reply", "notifications@", "newsletter", "mailer-daemon", "donotreply")
 _EMAIL = re.compile(r"<([^>]+)>")
@@ -35,7 +35,7 @@ def _norm_self_ts(ts: float) -> float:
     """WhatsApp stores ms; normalize to epoch seconds."""
     return ts / 1000.0 if ts > 1e12 else ts
 
-# Deterministic guard patterns (code-first, V15) — small model gets these wrong.
+# Deterministic guard patterns (code-first, V15), small model gets these wrong.
 # One-time codes / 2FA: noise, never an owner action even though they look urgent.
 _OTP = re.compile(
     r"\b(otp|one[- ]time|verification code|login code|kod (logowania|weryfikacyjny|do logowania)|"
@@ -44,7 +44,7 @@ _OTP = re.compile(
 )
 # Automated self/report mail that slips past the NOISE sender list.
 _AUTOMATED = re.compile(r"\b(daily report|raport dzienny|status report|cron|backup (ok|complete)|build (passed|failed))\b", re.IGNORECASE)
-# Phishing-shaped payment/verification mail — looks urgent, almost always a scam.
+# Phishing-shaped payment/verification mail, looks urgent, almost always a scam.
 _PHISH = re.compile(
     r"(payment (notification|requiring|confirm)|requir\w* verification|verify your|"
     r"unusual activity|account (suspend|limit|lock)|zweryfikuj|potwierdź (płatność|konto|dane)|"
@@ -107,11 +107,11 @@ class TriageEngine:
         self.contacts = contacts
         self.gmail = gmail_service
         self.brain = brain
-        self.on_self_notes = None  # optional callback(text, batch_ref)->int — propose events (V27)
+        self.on_self_notes = None  # optional callback(text, batch_ref)->int, propose events (V27)
         self.owner = [a.strip() for a in (owner_aliases or "").split(",") if a.strip()] or ["Owner"]
         self.owner_email = (owner_email or "").strip().lower()
         self.owner_lid = re.sub(r"\D", "", owner_lid or "")  # owner's own WA @lid -> skip own msgs (V22)
-        # owner's self-chat (message-yourself) JIDs — these notes are KEPT (V26)
+        # owner's self-chat (message-yourself) JIDs, these notes are KEPT (V26)
         self.owner_ids = {x for x in (self.owner_lid, re.sub(r"\D", "", owner_phone or "")) if x}
 
     def _is_self_chat(self, chat_id: str) -> bool:
@@ -162,7 +162,7 @@ class TriageEngine:
             if own and not self_chat:
                 continue
             if self_chat:
-                # owner's own inbox — a note or forwarded message to himself
+                # owner's own inbox, a note or forwarded message to himself
                 items.append(TriageItem(
                     "whatsapp", r["ext_id"], sender, "📝 Notatka (WA do siebie)", r["ts"], "",
                     r["body"] or "", chat_id=chat_id, is_self_note=True,
@@ -172,7 +172,7 @@ class TriageEngine:
             if self.contacts:
                 nm = self.contacts.name_for(sender, r["sender_name"] or "")
                 person = nm if nm != sender else (r["sender_name"] or None)
-            # Re-derive group flag — never trust the stored bit (B3: old/backfilled
+            # Re-derive group flag, never trust the stored bit (B3: old/backfilled
             # rows have it wrong, which leaked group chatter as 'high').
             is_group = bool(r["is_group"]) or derive_is_group(chat_id, sender)
             items.append(TriageItem(
@@ -360,7 +360,7 @@ class TriageEngine:
         return items
 
     def _meta(self, it: TriageItem) -> str:
-        """Rule-target sidecar for a review item — lets a one-click decision
+        """Rule-target sidecar for a review item, lets a one-click decision
         build a scoped rule (V21)."""
         sender = (it.sender or "").lower()
         domain = sender.split("@")[-1] if "@" in sender else ""

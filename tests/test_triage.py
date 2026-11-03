@@ -1,4 +1,4 @@
-"""Triage engine tests — incremental, chunked classify, dedup, person weight."""
+"""Triage engine tests, incremental, chunked classify, dedup, person weight."""
 
 import json
 

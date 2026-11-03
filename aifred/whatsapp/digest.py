@@ -1,10 +1,10 @@
 """WhatsApp digest (V11, V15). Code prefilters; LLM only summarizes shortlist.
 
 Pipeline:
-  1. prefilter() — pure code scoring (sender/keyword/question/date/length).
+  1. prefilter(), pure code scoring (sender/keyword/question/date/length).
      Drops chatter; keeps actionable. This is the context-saver (V11): the LLM
      never sees the raw group history, only the ranked shortlist.
-  2. summarize() — one LLM call over the shortlist -> {summary, items[]}.
+  2. summarize(), one LLM call over the shortlist -> {summary, items[]}.
   3. persist items to brain.md (V2) + store cache.
 """
 

@@ -1,4 +1,4 @@
-"""WhatsApp query + people tools (I.whatsapp) — agent READS messages + resolves
+"""WhatsApp query + people tools (I.whatsapp), agent READS messages + resolves
 identities (name/alias <-> number/jid via the Contacts layer).
 
 Without these the agent had no WhatsApp access and couldn't tell that "Kasia"

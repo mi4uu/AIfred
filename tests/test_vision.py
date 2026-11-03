@@ -1,4 +1,4 @@
-"""Vision on-demand (V36) — describe_image via VL model + last_image lookup."""
+"""Vision on-demand (V36), describe_image via VL model + last_image lookup."""
 
 import base64
 

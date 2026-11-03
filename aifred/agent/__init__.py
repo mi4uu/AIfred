@@ -1,4 +1,4 @@
-"""Agent — intent router + tool-calling loop."""
+"""Agent, intent router + tool-calling loop."""
 
 from aifred.agent.loop import AgentLoop
 from aifred.agent.router import IntentRouter

@@ -1,4 +1,4 @@
-"""Raw ollama caller for evaluation — full control over model + sampling.
+"""Raw ollama caller for evaluation, full control over model + sampling.
 
 Bypasses LLMClient so each call can set a different model and options
 (temperature/top_p/top_k/repeat_penalty/num_ctx/seed), think=false, and a
@@ -25,7 +25,7 @@ class Sampling:
         return {"seed": SEED, **self.options}
 
 
-# sweep grid — from greedy to Qwen's recommended non-thinking settings, with/without
+# sweep grid, from greedy to Qwen's recommended non-thinking settings, with/without
 # an explicit num_ctx (ollama's runtime default is 4096 -> truncates big prompts).
 SAMPLINGS = [
     Sampling("greedy", {"temperature": 0.0}),                                   # current behaviour

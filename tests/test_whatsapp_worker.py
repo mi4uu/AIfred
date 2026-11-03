@@ -1,4 +1,4 @@
-"""WhatsApp worker normalize tests — fake neonize proto, no live connection."""
+"""WhatsApp worker normalize tests, fake neonize proto, no live connection."""
 
 from aifred.whatsapp.worker import normalize_neonize
 

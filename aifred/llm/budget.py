@@ -1,6 +1,6 @@
 """Context budget guard (C7, V11). Keep turn ctx <=16k.
 
-Approx token count (chars/4 + per-msg overhead) — cheap, no tokenizer dep.
+Approx token count (chars/4 + per-msg overhead), cheap, no tokenizer dep.
 Guard trims oldest non-system messages until fit. System prompt + last user
 message always kept. Raises if even minimal set overflows.
 """
@@ -28,7 +28,7 @@ def count_messages(messages: list[dict]) -> int:
 
 
 class BudgetExceeded(Exception):
-    """Minimal message set still over budget — caller must shrink data (V11)."""
+    """Minimal message set still over budget, caller must shrink data (V11)."""
 
 
 @dataclass

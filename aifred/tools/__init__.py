@@ -1,4 +1,4 @@
-"""Tool framework — typed tools, compact schemas, no prose injection (V10)."""
+"""Tool framework, typed tools, compact schemas, no prose injection (V10)."""
 
 from aifred.tools.base import Tool, ToolError, tool_from_model
 from aifred.tools.registry import ToolRegistry

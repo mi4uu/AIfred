@@ -1,4 +1,4 @@
-"""Telegram bot (I.telegram). Long-poll via httpx — no extra dependency.
+"""Telegram bot (I.telegram). Long-poll via httpx, no extra dependency.
 
 Security: allowed-users gate. Messages from any user not in AIFRED_TELEGRAM_
 ALLOWED_USERS are ignored (the bot handles family/private data). Each allowed

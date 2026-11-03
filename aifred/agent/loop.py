@@ -46,7 +46,7 @@ class AgentLoop:
     confirm: ConfirmHook = field(default=_deny)
 
     def run(self, user_message: str, history: list[dict] | None = None, on_step=None) -> dict:
-        """on_step(event, detail) optional — emits 'thinking'/'tool'/'done' for SSE."""
+        """on_step(event, detail) optional, emits 'thinking'/'tool'/'done' for SSE."""
         def step(event: str, detail: str = "") -> None:
             if on_step:
                 on_step(event, detail)

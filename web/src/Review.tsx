@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge, Box, Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { decideReview, getReview, type ReviewDecision, type ReviewItem } from "./api";
 
-// "Do decyzji" — items the small model was unsure about. The owner's verdict
+// "Do decyzji": items the small model was unsure about. The owner's verdict
 // becomes a learned rule (active learning), so next time it's handled silently.
 export function Review() {
   const [items, setItems] = useState<ReviewItem[]>([]);

@@ -1,9 +1,9 @@
-"""Standalone embedder (V31) — ollama /api/embed, NOT the chat path.
+"""Standalone embedder (V31), ollama /api/embed, NOT the chat path.
 
 Runs a tiny embedding model (qwen3-embedding:0.6b) that, with
-OLLAMA_MAX_LOADED_MODELS=2, stays resident ALONGSIDE the chat model — so a
+OLLAMA_MAX_LOADED_MODELS=2, stays resident ALONGSIDE the chat model, so a
 recall() never evicts qwen3-vl. Vectors are stored as float32 bytes; cosine is
-pure-python (corpus is small — hundreds/thousands of snippets), so no numpy dep.
+pure-python (corpus is small, hundreds/thousands of snippets), so no numpy dep.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class Embedder:
     def __init__(self, base_url: str = "http://localhost:11434", model: str = "qwen3-embedding:0.6b",
                  keep_alive: str = "30m", client: httpx.Client | None = None):
         self.base = base_url.rstrip("/")
-        # tolerate an OpenAI-style base ("…/v1") — embed lives on the native root
+        # tolerate an OpenAI-style base ("…/v1"), embed lives on the native root
         self.base = self.base.removesuffix("/v1")
         self.model = model
         self.keep_alive = keep_alive

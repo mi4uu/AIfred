@@ -1,4 +1,4 @@
-"""WhatsApp pairing manager (I.whatsapp, V5) — drives neonize from the web UI.
+"""WhatsApp pairing manager (I.whatsapp, V5), drives neonize from the web UI.
 
 Holds connection state + the current QR (rendered to a PNG data URL via segno
 so the frontend just shows an <img>, no JS QR lib). start() runs neonize in a
@@ -46,7 +46,7 @@ class WhatsAppManager:
     lock_path: str
     on_message: Callable | None = None
     agent: AgentLike | None = None     # for owner commands
-    owner_tail: str = ""              # owner's WA number (last 9 digits) — commands only from owner
+    owner_tail: str = ""              # owner's WA number (last 9 digits), commands only from owner
     media_dir: str = ""               # where downloaded images land (V36)
     state: str = "idle"  # idle | pairing | connected | error
     qr_data_url: str | None = None
@@ -91,7 +91,7 @@ class WhatsAppManager:
             if phone:
                 self.store.set_lid_phone(lid, phone)
                 log.info("lid->phone resolved: %s -> %s", lid, phone)
-        except Exception:  # noqa: S110 — resolution is best-effort
+        except Exception:  # noqa: S110 -- resolution is best-effort
             pass
 
     def _backfill_lid_phones(self, client) -> None:  # pragma: no cover (live)
@@ -109,7 +109,7 @@ class WhatsAppManager:
                     phone = re.sub(r"\D", "", getattr(pj, "User", ""))
                     if phone:
                         self.store.set_lid_phone(lid, phone)
-                except Exception:  # noqa: S112 — one lid failing to resolve shouldn't stop the backfill
+                except Exception:  # noqa: S112 -- one lid failing to resolve shouldn't stop the backfill
                     continue
             n = len(self.store.lid_phone_map())
             if n:

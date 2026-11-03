@@ -18,9 +18,9 @@ journalctl --user -u aifred.service -f
 
 ## Ports
 
-- **9120** — FastAPI web API + UI backend. **This is the port to expose via Cloudflare tunnel.**
+- **9120**: FastAPI web API + UI backend. **This is the port to expose via Cloudflare tunnel.**
   Bound to 127.0.0.1; the tunnel terminates TLS and forwards to `http://127.0.0.1:9120`.
-- 5173 — vite dev server (local dev only, not for prod; `bun run build` serves from FastAPI later).
+- 5173: vite dev server (local dev only, not for prod; `bun run build` serves from FastAPI later).
 
 ### Cloudflare tunnel
 
@@ -29,4 +29,4 @@ cloudflared tunnel --url http://127.0.0.1:9120
 # or a named tunnel mapping a hostname -> http://127.0.0.1:9120
 ```
 
-Set `AIFRED_WEB_TOKEN` in `.env` before exposing publicly — it gates every `/api/*` call.
+Set `AIFRED_WEB_TOKEN` in `.env` before exposing publicly: it gates every `/api/*` call.

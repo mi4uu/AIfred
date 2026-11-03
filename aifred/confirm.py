@@ -1,10 +1,10 @@
 """Action-confirm layer (V7). Gate side-effecting tools.
 
 Modes:
-  deny       — block all side effects (safe default for unattended runs)
-  ask        — register a pending confirmation, deny for now; an interface
+  deny      , block all side effects (safe default for unattended runs)
+  ask       , register a pending confirmation, deny for now; an interface
                (telegram/web) surfaces it and approves/rejects out of band
-  allow_all  — explicit pre-authorization for a whole session (use sparingly)
+  allow_all , explicit pre-authorization for a whole session (use sparingly)
 
 Per-tool pre-authorization lets the user say "always allow calendar_create"
 without opening everything. The AgentLoop confirm hook = ConfirmManager.hook.

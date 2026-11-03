@@ -1,4 +1,4 @@
-"""Scorers — turn a model reply into correct/hallucinated booleans per task."""
+"""Scorers, turn a model reply into correct/hallucinated booleans per task."""
 
 from __future__ import annotations
 

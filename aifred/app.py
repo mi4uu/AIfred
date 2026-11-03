@@ -1,4 +1,4 @@
-"""Runtime assembler — wires brain, store, tools, agent, telegram into one app.
+"""Runtime assembler, wires brain, store, tools, agent, telegram into one app.
 
 Degrades gracefully: google tools load only if a valid (scoped) token exists;
 brain tools load only if brain.md is configured. Nothing here is fatal at
@@ -146,7 +146,7 @@ def _try_google_tools(creds, registry: ToolRegistry, llm, store, status: dict):
         for t in build_digest_tool(gmail, cal, store, llm):
             registry.register(t)
         drive = None
-        try:  # drive.readonly is a newer scope — degrade if not yet granted (re-auth)
+        try:  # drive.readonly is a newer scope, degrade if not yet granted (re-auth)
             drive = build("drive", "v3", credentials=creds, cache_discovery=False)
         except Exception:
             drive = None
@@ -205,25 +205,25 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
         except Exception as e:
             status["contacts"] = f"error: {e}"
 
-    # whatsapp read tools + people lookup — agent accesses messages and resolves identities
+    # whatsapp read tools + people lookup, agent accesses messages and resolves identities
     from aifred.skills.whatsapp_query import build_whatsapp_tools
 
     for t in build_whatsapp_tools(store, contacts):
         registry.register(t)
 
-    # attention tool — agent reads triage output ("what's important today")
+    # attention tool, agent reads triage output ("what's important today")
     from aifred.skills.attention import build_attention_tool
 
     for t in build_attention_tool(store, contacts):
         registry.register(t)
 
-    # triage rule tools — teaching/correcting importance preferences
+    # triage rule tools, teaching/correcting importance preferences
     from aifred.skills.rules import build_rule_tools
 
     for t in build_rule_tools(store):
         registry.register(t)
 
-    # read Google Docs/Sheets links (Drive export) — needs drive.readonly scope
+    # read Google Docs/Sheets links (Drive export), needs drive.readonly scope
     if drive_service is not None:
         from pydantic import BaseModel, Field
 
@@ -238,7 +238,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             lambda url: read_url(drive_service, url), tags=("google",),
         ))
 
-    # in-engine semantic memory (RAG) — recall across days/sources without dumping
+    # in-engine semantic memory (RAG), recall across days/sources without dumping
     rag = None
     if s.rag_enabled:
         from pydantic import BaseModel, Field
@@ -264,7 +264,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             RecallArgs, _recall, tags=("memory", "core"),
         ))
 
-    # vision on-demand — read a WhatsApp image with a VL model only when asked (V36)
+    # vision on-demand, read a WhatsApp image with a VL model only when asked (V36)
     if s.vision_enabled:
         import os as _os
 
@@ -294,7 +294,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             VisionArgs, _vision, tags=("vision", "core"),
         ))
 
-    # daily-note composer — structured "notatka z dnia" (writes the template too)
+    # daily-note composer, structured "notatka z dnia" (writes the template too)
     if brain is not None:
         from aifred.skills.daily_note import build_daily_note_tool
 

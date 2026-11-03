@@ -1,7 +1,7 @@
 """In-engine semantic memory (V31).
 
-Indexes AIfred's OWN operational data — chat turns, WhatsApp (across days), mail
-snippets/attention, self-notes, journal inbox — into the embeddings table, then
+Indexes AIfred's OWN operational data, chat turns, WhatsApp (across days), mail
+snippets/attention, self-notes, journal inbox, into the embeddings table, then
 recall(query, k) returns the few most relevant snippets across sources/days.
 
 This is the "retrieve, don't dump" lever the eval pointed at: instead of feeding
@@ -38,7 +38,7 @@ class RagIndex:
     def _candidates(self) -> list[tuple[str, str, str, float]]:
         """(ref, source, text, ts) for everything worth remembering."""
         out: list[tuple[str, str, str, float]] = []
-        # whatsapp — resolve sender to a name; skip owner's own + empty
+        # whatsapp, resolve sender to a name; skip owner's own + empty
         for r in self.store.recent_messages("whatsapp", limit=2000):
             body = (r["body"] or "").strip()
             if len(body) < MIN_LEN:
@@ -49,11 +49,11 @@ class RagIndex:
             if self.contacts:
                 who = self.contacts.name_for(r["sender"], r["sender_name"] or "")
             out.append((f"wa:{r['ext_id']}", "whatsapp", _clip(f"{who}: {body}"), float(r["ts"])))
-        # triage attention / self-notes — already curated as important
+        # triage attention / self-notes, already curated as important
         for status in ("open", "done"):
             for it in self.store.list_attention(status):
                 out.append((f"att:{it['id']}", "attention", _clip(it["content"]), float(it["created_ts"])))
-        # brain.md inbox — the owner's self-notes/forwards (high-value memory)
+        # brain.md inbox, the owner's self-notes/forwards (high-value memory)
         if self.brain is not None:
             try:
                 inbox = self.brain.read("Journal/inbox.md")

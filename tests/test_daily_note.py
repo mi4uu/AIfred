@@ -1,4 +1,4 @@
-"""Daily-note composer — gathers the day's signals, fills the fixed template."""
+"""Daily-note composer, gathers the day's signals, fills the fixed template."""
 
 from datetime import UTC
 

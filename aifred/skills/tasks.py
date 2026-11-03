@@ -1,7 +1,7 @@
 """Task tracker skill (V2, V12).
 
 brain.md MCP is append-only, so mutable todo/done STATE lives in the store
-(items table) while brain.md gets an append log line on add/complete — brain
+(items table) while brain.md gets an append log line on add/complete, brain
 stays the canonical human-readable record (V2), store is the queryable state.
 Recall of related notes uses retrieval (V12).
 """

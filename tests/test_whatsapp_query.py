@@ -1,4 +1,4 @@
-"""WhatsApp query tool tests — agent reads ingested messages, not brain.md."""
+"""WhatsApp query tool tests, agent reads ingested messages, not brain.md."""
 
 from typing import ClassVar
 

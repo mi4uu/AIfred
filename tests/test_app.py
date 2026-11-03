@@ -1,4 +1,4 @@
-"""Assembler tests — graceful degrade when services absent."""
+"""Assembler tests, graceful degrade when services absent."""
 
 from aifred.app import build_runtime
 from aifred.config import Settings

@@ -1,4 +1,4 @@
-"""WhatsApp worker (I.whatsapp, V5, V13) — neonize / whatsmeow.
+"""WhatsApp worker (I.whatsapp, V5, V13), neonize / whatsmeow.
 
 whatsmeow (via neonize) is the reliable transport: multi-device, auto-reconnect,
 history sync, persistent session. Far steadier than baileys/whatscli.
@@ -47,7 +47,7 @@ def derive_is_group(chat: str, sender: str) -> bool:
       - WhatsApp group/newsletter numeric prefix 120363
       - participant (sender) differs from the chat JID  -> it's a room
       - very long (>=16 digit) chat JID
-    Decide from the CHAT JID only — never from sender. WhatsApp now hands out
+    Decide from the CHAT JID only, never from sender. WhatsApp now hands out
     @lid sender IDs that differ from the phone-chat JID even in direct chats, so
     'sender != chat' falsely flags 1:1 conversations as groups.
     Direct chats keep short numeric chat JIDs (a phone number, <=14 digits).
@@ -79,7 +79,7 @@ def normalize_neonize(message) -> WAMessage | None:
     body = ""
     if msg is not None:
         body = getattr(msg, "conversation", "") or _getattr_path(msg, "extendedTextMessage", "text", default="") or ""
-        if not body:  # image/media — mark it (non-empty) so it's ingested + visible (V36)
+        if not body:  # image/media, mark it (non-empty) so it's ingested + visible (V36)
             cap = _getattr_path(msg, "imageMessage", "caption", default="")
             if getattr(msg, "imageMessage", None) is not None and getattr(msg.imageMessage, "URL", None) is not None:
                 body = f"[obraz] {cap}".strip()

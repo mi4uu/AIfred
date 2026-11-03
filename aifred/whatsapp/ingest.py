@@ -3,7 +3,7 @@
 Transport-agnostic: any source (whatsmeow bridge webhook, baileys sidecar)
 normalizes to a common shape, then ingest_batch dedups into the store and
 advances the per-chat cursor (V13). SingleInstanceLock enforces exactly one
-live connection (V5) — second holder fails loud, mirroring baileys'
+live connection (V5), second holder fails loud, mirroring baileys'
 `conflict: replaced` but caught on our side.
 
 Recommended transport: whatsmeow bridge POSTing messages to AIfred webhook.
@@ -24,7 +24,7 @@ class WhatsAppLockError(Exception):
 
 
 class SingleInstanceLock:
-    """File lock — only one whatsapp connection at a time (V5)."""
+    """File lock, only one whatsapp connection at a time (V5)."""
 
     def __init__(self, lock_path: str | Path):
         self.path = Path(lock_path)
@@ -32,7 +32,7 @@ class SingleInstanceLock:
         self._fh: IO[str] | None = None
 
     def acquire(self) -> None:
-        fh = open(self.path, "w")  # noqa: SIM115 — held across acquire()/release(), not a `with` block
+        fh = open(self.path, "w")  # noqa: SIM115 -- held across acquire()/release(), not a `with` block
         try:
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as e:
@@ -62,9 +62,9 @@ class WAMessage:
     ts: float
     body: str
     raw: dict[str, Any]
-    sender_name: str = ""  # WhatsApp PushName (display name) — for contact linking
+    sender_name: str = ""  # WhatsApp PushName (display name), for contact linking
     is_group: bool = False
-    from_me: bool = False  # owner's own outgoing message (IsFromMe) — skip in triage (V22)
+    from_me: bool = False  # owner's own outgoing message (IsFromMe), skip in triage (V22)
 
 
 class WhatsAppSource(Protocol):

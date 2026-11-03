@@ -1,4 +1,4 @@
-"""Identity layer tests — brain.md ludzie/ parsing + PushName JID linking."""
+"""Identity layer tests, brain.md ludzie/ parsing + PushName JID linking."""
 
 from aifred.contacts import Contacts, parse_person
 from aifred.store.db import Store

@@ -1,4 +1,4 @@
-"""Triage rules — learning/correction overrides + owner WhatsApp command."""
+"""Triage rules, learning/correction overrides + owner WhatsApp command."""
 
 import pytest
 

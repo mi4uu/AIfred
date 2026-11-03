@@ -1,11 +1,11 @@
-"""Golden evaluation cases — built from AIfred's REAL data, with the correct
+"""Golden evaluation cases, built from AIfred's REAL data, with the correct
 answers established by a large model with full context. Three task families that
 target the failure the owner cares about: hallucination, worse as context grows.
 
-  grounding  — answer ONLY from context, else say NIE_WIEM. The needle is real;
+  grounding , answer ONLY from context, else say NIE_WIEM. The needle is real;
                distractor padding grows the prompt to expose context-loss.
-  extract    — pull calendar events from a note; must NOT invent dates.
-  triage     — classify importance/directed; must respect group + owner-terms.
+  extract   , pull calendar events from a note; must NOT invent dates.
+  triage    , classify importance/directed; must respect group + owner-terms.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ GROUNDING_SYS = (
     "Odpowiedz jednym krótkim zdaniem albo NIE_WIEM."
 )
 
-# (question, context_core, gold) — gold None means must refuse (NIE_WIEM).
+# (question, context_core, gold), gold None means must refuse (NIE_WIEM).
 _GROUNDING = [
     ("O której godzinie Zosia ma wizytę u dentysty?",
      "Zosia we wtorek 09.06 ma wizytę u dentysty. STOMATOLOG KAMIENNA 21 GODZINA 16.40.",
@@ -58,7 +58,7 @@ EXTRACT_SYS = (
     "all_day (bool), start_time (HH:MM lub null). Użyj TYLKO dat obecnych w tekście — nie wymyślaj. "
     "Odpowiedz TYLKO tablicą JSON."
 )
-# (note_text, must_dates, forbidden_count_over) — dates that MUST appear; extra invented dates = hallucination
+# (note_text, must_dates, forbidden_count_over), dates that MUST appear; extra invented dates = hallucination
 _EXTRACT = [
     ("Zosia we wtorek 09.06 wizyta u dentysty godzina 16.40. Nocuje 16 i 17 czerwca.",
      {"2026-06-09", "2026-06-16", "2026-06-17"}),

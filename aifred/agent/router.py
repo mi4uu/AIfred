@@ -35,7 +35,7 @@ KEYWORD_TAGS: dict[str, set[str]] = {
     "digest": {"digest"},
     "summary": {"digest"},
     "brief": {"digest"},
-    # importance / "what's up today" — surface attention + calendar + whatsapp
+    # importance / "what's up today", surface attention + calendar + whatsapp
     "important": {"digest", "calendar", "whatsapp"},
     "ważne": {"digest", "calendar", "whatsapp"},
     "wazne": {"digest", "calendar", "whatsapp"},

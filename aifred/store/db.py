@@ -1,9 +1,9 @@
 """sqlite store (I.store). Scratch layer for incremental processing (V13).
 
 Tables:
-  messages  — raw ingested msgs (whatsapp/mail), dedup by (channel, ext_id)
-  cursors   — last-seen marker per (channel, chat_id) for incremental scan (V13)
-  items     — extracted actionable items cache (status: open/done/pushed)
+  messages , raw ingested msgs (whatsapp/mail), dedup by (channel, ext_id)
+  cursors  , last-seen marker per (channel, chat_id) for incremental scan (V13)
+  items    , extracted actionable items cache (status: open/done/pushed)
 
 brain.md stays canonical for notes/tasks (V2); this is ephemeral working data.
 stdlib sqlite3, no dependency.
@@ -131,7 +131,7 @@ class Store:
             self.conn.execute("ALTER TABLE messages ADD COLUMN sender_name TEXT DEFAULT ''")
         if "is_group" not in cols:
             self.conn.execute("ALTER TABLE messages ADD COLUMN is_group INTEGER DEFAULT 0")
-        if "from_me" not in cols:  # owner's own sent msgs — excluded from triage (V22)
+        if "from_me" not in cols:  # owner's own sent msgs, excluded from triage (V22)
             self.conn.execute("ALTER TABLE messages ADD COLUMN from_me INTEGER DEFAULT 0")
         # meta = JSON rule-target for the active-learning review queue (V21)
         icols = {r[1] for r in self.conn.execute("PRAGMA table_info(items)")}
@@ -180,7 +180,7 @@ class Store:
             return cur.rowcount > 0
 
     def known_sender_names(self, channel: str = "whatsapp", direct_only: bool = False) -> list[dict]:
-        """Distinct (chat_id, sender, sender_name) seen — for contact linking.
+        """Distinct (chat_id, sender, sender_name) seen, for contact linking.
         direct_only excludes group messages (a group JID is not a person's number)."""
         sql = ("SELECT DISTINCT chat_id, sender, sender_name FROM messages "
                "WHERE channel=? AND sender_name != ''")
@@ -387,7 +387,7 @@ class Store:
     def list_attention(self, status: str = "open") -> list[sqlite3.Row]:
         order = "CASE kind WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, created_ts DESC"
         return self._query(
-            f"SELECT * FROM items WHERE source LIKE 'triage%' AND status=? ORDER BY {order}",  # noqa: S608 — order is the hardcoded literal above, not user input
+            f"SELECT * FROM items WHERE source LIKE 'triage%' AND status=? ORDER BY {order}",  # noqa: S608 -- order is the hardcoded literal above, not user input
             (status,),
         )
 

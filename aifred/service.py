@@ -19,11 +19,11 @@ from aifred.config import get_settings
 from aifred.main import create_app
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-# V8: httpx logs full URLs incl. the telegram bot token at INFO — silence it
+# V8: httpx logs full URLs incl. the telegram bot token at INFO, silence it
 logging.getLogger("httpx").setLevel(logging.WARNING)
 log = logging.getLogger("aifred.service")
 
-WARMUP_INTERVAL_S = 1200  # 20 min — under the 30m keep_alive so model stays resident
+WARMUP_INTERVAL_S = 1200  # 20 min, under the 30m keep_alive so model stays resident
 
 
 def _warmup_loop(rt: Runtime) -> None:  # pragma: no cover (long-running)
@@ -72,9 +72,9 @@ def _triage_loop(rt: Runtime) -> None:  # pragma: no cover (long-running)
                 notify(rt, f"📝 Zapisałem {result['notes']} notatkę/i z WhatsApp (do siebie) w brain.md.")
         except Exception as e:
             log.warning("triage run failed: %s", e)
-        # re-sync with brain.md — owner or another agent may have edited it (V32)
+        # re-sync with brain.md, owner or another agent may have edited it (V32)
         _resync_brain(rt)
-        # self-maintenance — keep the contact book + journal current without me (V24)
+        # self-maintenance, keep the contact book + journal current without me (V24)
         _contacts_writeback(rt)
         _daily_note_maybe(rt)
         try:  # re-judge frozen attention items: guards + identity upgrades (V37)

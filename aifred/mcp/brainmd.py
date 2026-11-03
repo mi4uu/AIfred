@@ -1,4 +1,4 @@
-"""brain.md wrapper (I.brainmd, V2, V12) — binds the live MCP RAG tools.
+"""brain.md wrapper (I.brainmd, V2, V12), binds the live MCP RAG tools.
 
 Server tools (discovered live):
   search_notes(query, scope)            full-text, optional folder scope
@@ -8,7 +8,7 @@ Server tools (discovered live):
   list_notes(folder) / get_tasks(filter) / find_similar_tasks(...)
   current_datetime()                    absolute time orientation
 
-`scope` confines reads/searches to folders/subfolders — used to keep an
+`scope` confines reads/searches to folders/subfolders, used to keep an
 internal-reasoning catalog separate from the user-facing journal (the hermes
 pattern: think in `internal/`, distill conclusions into `journal/`).
 

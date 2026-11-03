@@ -4,7 +4,7 @@ Maps how Owner calls people (name + aliases) <-> their identifiers (WhatsApp
 JID/number, email, phone). Canonical source = brain.md `ludzie/` notes (the
 hermes convention). JIDs get linked automatically from WhatsApp PushNames seen
 in the store: when a message's PushName matches a person's alias, that JID is
-attached to the person — so "co pisała Kasia" can resolve to her chat.
+attached to the person, so "co pisała Kasia" can resolve to her chat.
 
 Google People (emails/phones) can enrich this later once OAuth is done.
 """
@@ -27,7 +27,7 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE = re.compile(r"\+?\d[\d\s\-]{7,}\d")
 _JID = re.compile(r"\d{6,}(?:@[\w.]+)?")
 _STOP = {"title", "rola", "dziewczyna", "ownera", "michał", "tags", "ludzie", "rodzina"}
-# how a person addresses the owner (pet name) — note line "Mówi do mnie: kotek, kotku"
+# how a person addresses the owner (pet name), note line "Mówi do mnie: kotek, kotku"
 _OWNER_TERMS = re.compile(
     r"(?:mówi do mnie|nazywa mnie|zwraca się do mnie|pseudonim dla mnie|mój pseudonim)\s*[:\-]?\s*(.+)",
     re.IGNORECASE,
@@ -43,7 +43,7 @@ class Person:
     jids: set[str] = field(default_factory=set)
     emails: set[str] = field(default_factory=set)
     phones: set[str] = field(default_factory=set)
-    path: str = ""  # brain.md note path — for auto write-back
+    path: str = ""  # brain.md note path, for auto write-back
     owner_terms: set[str] = field(default_factory=set)  # how THIS person addresses the owner (e.g. Kasia -> "kotek")
 
     def matches(self, query: str) -> bool:
@@ -97,12 +97,12 @@ class Contacts:
         self.people: list[Person] = []
         self.google_contacts: list[dict] = []
         self.owner_name = owner_name or "Owner (ja)"
-        # owner's own WA identities (the @lid + phone) — so own messages aren't a phantom contact
+        # owner's own WA identities (the @lid + phone), so own messages aren't a phantom contact
         self.owner_ids = {self._digits(x) for x in (owner_lid, owner_phone) if self._digits(x)}
         self.lid_map: dict[str, str] = {}  # WhatsApp @lid -> real phone (V34)
 
     def _resolved_tail(self, sender: str) -> str:
-        """Last-9 digits of a sender's REAL phone — resolving @lid -> phone (V34)
+        """Last-9 digits of a sender's REAL phone, resolving @lid -> phone (V34)
         so Google contacts (keyed by phone) can match WhatsApp senders."""
         base = self.lid_map.get(self._digits(sender)) or sender
         return self._digits(base)[-9:]
@@ -143,7 +143,7 @@ class Contacts:
 
     def load_google(self, people_service) -> int:
         """Load Google Contacts into a standalone directory (NOT merged blindly
-        into brain people — name-only overlap is ambiguous and dangerous). Used
+        into brain people, name-only overlap is ambiguous and dangerous). Used
         for confident links via phone number (WA jid == phone) and name search.
         """
         self.google_contacts = []
@@ -178,7 +178,7 @@ class Contacts:
         return len(self.google_contacts)
 
     def link_google(self) -> int:
-        """Enrich brain people with real phone/email from Google — but ONLY via an
+        """Enrich brain people with real phone/email from Google, but ONLY via an
         UNAMBIGUOUS name match: an alias that maps to exactly ONE Google contact
         (uniqueness in the owner's own address book = confident). This is what
         finds "Kasia" -> "Kasia ❤️" +48… without the old fuzzy-merge wrong-data
@@ -239,7 +239,7 @@ class Contacts:
         return None
 
     def jids_for(self, query: str) -> set[str]:
-        """All WhatsApp jids/numbers for a person — brain note + linked PushNames."""
+        """All WhatsApp jids/numbers for a person, brain note + linked PushNames."""
         person = self.resolve(query)
         if not person:
             return set()
@@ -294,14 +294,14 @@ class Contacts:
         return matched[0] if len(matched) == 1 else None
 
     def auto_writeback(self, today: str = "") -> list[dict]:
-        """Fill confirmed WhatsApp numbers into ludzie/ notes — but only on an
+        """Fill confirmed WhatsApp numbers into ludzie/ notes, but only on an
         UNAMBIGUOUS PushName→alias match, and only where the note still has no
         number (placeholder 'do ustalenia'). Never overwrites real data; never
         guesses. This is what lets the contact book stay current without me."""
         from datetime import datetime
 
         today = today or datetime.now(UTC).strftime("%Y-%m-%d")
-        # DIRECT chats only — a group JID is not a person's personal number (V24)
+        # DIRECT chats only, a group JID is not a person's personal number (V24)
         links = {r["sender"]: r["sender_name"]
                  for r in self.store.known_sender_names("whatsapp", direct_only=True)
                  if r.get("sender") and r.get("sender_name")}
@@ -383,7 +383,7 @@ class Contacts:
         return out
 
     def teach_owner_term(self, person_query: str, term: str) -> dict:
-        """Record that `person_query` calls the owner `term` — persisted to their
+        """Record that `person_query` calls the owner `term`, persisted to their
         brain.md note so it survives restarts and the owner can see/edit it."""
         p = self.resolve(person_query)
         if p is None or not p.path:
@@ -434,7 +434,7 @@ class Contacts:
     def describe(self, query: str) -> dict:
         p = self.resolve(query)
         if not p:
-            # not in brain.md — maybe a Google contact
+            # not in brain.md, maybe a Google contact
             g = self.google_search(query)
             if g:
                 return {"found": True, "source": "google", "candidates": g}

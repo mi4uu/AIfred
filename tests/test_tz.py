@@ -1,4 +1,4 @@
-"""Europe/Warsaw DST handling (V35) — offset must flip CET/CEST per date,
+"""Europe/Warsaw DST handling (V35), offset must flip CET/CEST per date,
 not stay hardcoded at +02:00 (the Nov 2026 bug: CET is +01:00 in winter)."""
 
 from datetime import datetime

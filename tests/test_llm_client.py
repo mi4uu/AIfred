@@ -1,4 +1,4 @@
-"""T2 LLM client tests. MockTransport — no live ollama needed.
+"""T2 LLM client tests. MockTransport, no live ollama needed.
 
 Covers parse, budget-before-send (C7), cloud fallback opt-in gating (V1/C6).
 """

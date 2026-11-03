@@ -1,4 +1,4 @@
-"""Eval grid runner — model x sampling x cases, report hallucination + accuracy.
+"""Eval grid runner, model x sampling x cases, report hallucination + accuracy.
 
     uv run python -m aifred.eval.run                     # default models+samplings
     uv run python -m aifred.eval.run qwen3.6:27b gpt-oss:latest

@@ -1,9 +1,9 @@
-"""Agentic tool-use eval (V30 lesson) — the dimension the single-shot eval missed.
+"""Agentic tool-use eval (V30 lesson), the dimension the single-shot eval missed.
 
 qwen3-vl:8b passed extract/triage but, asked to "zanotuj X", called journal_add
 with the wrong arg and then FABRICATED success. This harness tests exactly that:
 given the real tool schemas + a Polish instruction, does the model emit the RIGHT
-tool call with the RIGHT required args? No fabrication credit — narrating instead
+tool call with the RIGHT required args? No fabrication credit, narrating instead
 of calling = fail.
 
     uv run python -m aifred.eval.agentic qwen3.6:27b gemma4:latest qwen3-vl:8b

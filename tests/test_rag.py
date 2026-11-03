@@ -1,4 +1,4 @@
-"""In-engine RAG (V31) — pack/cosine + incremental index + recall, fake embedder."""
+"""In-engine RAG (V31), pack/cosine + incremental index + recall, fake embedder."""
 
 from typing import ClassVar
 

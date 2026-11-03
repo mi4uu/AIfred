@@ -1,4 +1,4 @@
-"""Triage rule tools — how the agent LEARNS importance preferences from you.
+"""Triage rule tools, how the agent LEARNS importance preferences from you.
 
 "AIfred, ignoruj grupę STO" / "wiadomości od Anny nieważne" / "Kasia zawsze
 ważna" -> a deterministic rule the triage engine applies before/over the LLM.
