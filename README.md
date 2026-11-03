@@ -43,10 +43,12 @@ uv run pytest                # sanity check
 
 cd web && bun install && bun run build && cd ..   # builds web/dist, served by the backend
 
-uv run aifred                # web UI (from web/dist) + API on http://127.0.0.1:9120
+uv run aifred-service        # full assistant: agent, triage, Telegram, on http://127.0.0.1:9120
 ```
 
-`uv run aifred` serves `web/dist` if it exists; it doesn't build it. The `bun run build` step is required the first time and after any frontend change, or you get the API with no UI.
+`uv run aifred-service` serves `web/dist` if it exists; it doesn't build it. The `bun run build` step is required the first time and after any frontend change, or you get the API with no UI.
+
+There's also `uv run aifred`, a bare FastAPI entrypoint with no agent wired in: `/health` and `/config` work, `/api/chat` does not, and nothing runs in the background. It exists for serving the UI or probing the API shape without starting the full assistant; for actual use, run `aifred-service`.
 
 Point Ollama at a 16k context window so prompts don't get silently truncated: set `OLLAMA_CONTEXT_LENGTH=16384` on the Ollama service, and `OLLAMA_MAX_LOADED_MODELS=2` if you use the memory embedder, so it never evicts the agent model.
 
@@ -82,11 +84,13 @@ Run brain.md on its own if you only want the memory. Run AIfred if you want the 
 
 ## Safety model
 
-What AIfred can do on its own: read Gmail and WhatsApp, read and write your calendar, read and write brain.md notes and journal entries, and message you on Telegram.
+What AIfred can do on its own: read Gmail (read-only, no send scope requested or implemented) and WhatsApp, read brain.md notes and journal entries, write brain.md self-notes it captures from you, and reply to you on Telegram or WhatsApp when you talk to it there, the same as the web UI.
 
-What it cannot do without you tapping a button first: send mail, send a WhatsApp message on your behalf, or create a calendar event it proposed from a note. Those go out as a Telegram prompt with Yes/No buttons, and the reason it proposed them, and wait for your confirmation.
+What needs your confirmation first: every calendar write (`calendar_create`/`calendar_update`), whether you asked for it directly in chat or AIfred proposed it from a note. Chat-driven writes stage a pending confirmation in the web UI (`/api/confirm`); proposals from notes go out as a Telegram prompt with Yes/No buttons and the reason AIfred proposed them. Either way, nothing lands on your calendar until you approve it, and approving executes that exact pending action rather than quietly trusting the model to retry it.
 
-Cloud fallback (`AIFRED_CLOUD_FALLBACK_ENABLED`) is off by default; the model, your mail, and your WhatsApp history stay on your machine unless you turn it on. Telegram access is gated to an allowed-users list.
+AIfred does not send mail (no send scope exists) and has no tool to message a third party on WhatsApp on your behalf. It does reply directly on WhatsApp when you address it by name in a chat you're in (same trust boundary as talking to it on Telegram or the web), with no extra confirmation step for that reply, since it's answering you, not acting on someone else.
+
+Cloud fallback (`AIFRED_CLOUD_FALLBACK_ENABLED`) is off by default; the model, your mail, and your WhatsApp history stay on your machine unless you turn it on. That's separate from Telegram itself: if you use the Telegram channel at all, your messages and AIfred's replies there necessarily pass through Telegram's own servers, not just your machine. Telegram access is gated to an allowed-users list.
 
 ## Development
 
@@ -96,7 +100,7 @@ uv run ruff check .     # lint
 uv run mypy aifred      # types
 ```
 
-CI runs all three on Python 3.11 and 3.12, on every push and pull request.
+CI runs all three on Python 3.11 and 3.12, on push to `main` and on every pull request.
 
 Design notes, constraints, and the full list of invariants live in [SPEC.md](SPEC.md), written in a compact spec format.
 
