@@ -44,7 +44,7 @@ export function WhatsApp() {
       </Flex>
 
       {st?.paired && state !== "connected" && (
-        <Text size="2" color="gray">Paired — connecting…</Text>
+        <Text size="2" color="gray">Paired, connecting…</Text>
       )}
 
       {!st?.paired && state !== "pairing" && (

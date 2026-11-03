@@ -86,7 +86,7 @@ def normalize(raw: dict[str, Any]) -> WAMessage:
         or ""
     )
     if not ext_id:
-        raise ValueError("whatsapp message missing id — cannot dedup (V13)")
+        raise ValueError("whatsapp message missing id, cannot dedup (V13)")
     return WAMessage(ext_id=ext_id, chat_id=chat_id, sender=sender, ts=ts, body=body, raw=raw)
 
 

@@ -146,7 +146,7 @@ def test_resolver_approve_creates_event_with_context():
     s = Store(":memory:")
     payload = {"summary": "Dentysta", "start": "2026-06-09T16:40:00+02:00", "end": "2026-06-09T17:40:00+02:00",
                "source": "WA→ja (brain.md Journal/inbox.md)", "description": "Kontekst: https://b/n.md"}
-    pid = s.add_proposal("calendar", json.dumps(payload), "🗓️ 2026-06-09 16:40 — Dentysta", "r1", 1.0)
+    pid = s.add_proposal("calendar", json.dumps(payload), "🗓️ 2026-06-09 16:40, Dentysta", "r1", 1.0)
     cal = FakeCal()
     res = CalendarProposalResolver(s, cal)
     out = res.approve(pid)

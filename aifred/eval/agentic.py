@@ -55,7 +55,7 @@ def _call(client, model, instr):
         "model": model, "stream": False, "think": False, "keep_alive": "30m",
         "messages": [
             {"role": "system", "content": "Jesteś asystentem z narzędziami. Gdy użytkownik prosi o "
-             "zapisanie/dodanie/sprawdzenie — WYWOŁAJ właściwe narzędzie z poprawnymi argumentami. "
+             "zapisanie/dodanie/sprawdzenie, WYWOŁAJ właściwe narzędzie z poprawnymi argumentami. "
              "Nie udawaj że coś zrobiłeś bez wywołania narzędzia."},
             {"role": "user", "content": instr}],
         "tools": TOOLS, "options": {"temperature": 0, "num_ctx": 8192, "seed": 42}})

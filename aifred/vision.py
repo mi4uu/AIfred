@@ -18,7 +18,7 @@ import httpx
 log = logging.getLogger("aifred.vision")
 
 DEFAULT_PROMPT = (
-    "Opisz dokładnie, co jest na obrazku. Jeśli jest tekst — przepisz go WIERNIE "
+    "Opisz dokładnie, co jest na obrazku. Jeśli jest tekst, przepisz go WIERNIE "
     "(daty, godziny, kwoty, nazwiska). Nie zgaduj tego, czego nie widać. Zwięźle, po polsku."
 )
 

@@ -81,7 +81,7 @@ def main() -> int:
         for f, name, ln in findings:
             print(f"LEAK {f}:{ln} matches {name}")
     if not perms_ok:
-        print(f"PERMS {env} is group/other accessible — chmod 600")
+        print(f"PERMS {env} is group/other accessible, chmod 600")
     if findings or not perms_ok:
         return 1
     print("secret audit clean")

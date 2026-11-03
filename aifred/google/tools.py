@@ -198,13 +198,13 @@ class CalCreateArgs(BaseModel):
     summary: str
     start: str = Field(description=_LOCAL_DT_DESC)
     end: str = Field(description=_LOCAL_DT_DESC)
-    source: str = Field(description="origin of this event (brain.md ref or user msg) — required (V3)")
+    source: str = Field(description="origin of this event (brain.md ref or user msg), required (V3)")
     description: str = ""
 
 
 class CalUpdateArgs(BaseModel):
     event_id: str
-    source: str = Field(description="why updated — required (V3)")
+    source: str = Field(description="why updated, required (V3)")
     summary: str | None = None
     start: str | None = Field(default=None, description="local date+time YYYY-MM-DDTHH:MM, no offset")
     end: str | None = Field(default=None, description="local date+time YYYY-MM-DDTHH:MM, no offset")

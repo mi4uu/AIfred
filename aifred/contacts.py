@@ -345,7 +345,7 @@ class Contacts:
 
     @staticmethod
     def _inject_number(content: str, number: str, pushname: str, today: str) -> str:
-        line = f"- WhatsApp: {number} (PushName: {pushname}) — potwierdzone {today} (auto)"
+        line = f"- WhatsApp: {number} (PushName: {pushname}), potwierdzone {today} (auto)"
         placeholder = re.compile(
             r"^[ \t]*[-*]?\s*\**\s*(WhatsApp|Kontakt)\b.*?(do ustalenia|pojawi się automatycznie|numer pojawi).*$",
             re.IGNORECASE | re.MULTILINE,
@@ -460,5 +460,5 @@ class Contacts:
             cand = self.google_search(p.name) or self.google_search(" ".join(p.aliases))
             if cand:
                 out["google_candidates"] = cand
-                out["note"] = "no confirmed contact yet; candidates from Google by name — confirm which is correct"
+                out["note"] = "no confirmed contact yet; candidates from Google by name, confirm which is correct"
         return out

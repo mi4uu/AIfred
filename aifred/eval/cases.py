@@ -55,7 +55,7 @@ _GROUNDING = [
 
 EXTRACT_SYS = (
     "Wyłuskaj wydarzenia do kalendarza. Dziś 2026-06-04. Dla każdego: summary, date (YYYY-MM-DD), "
-    "all_day (bool), start_time (HH:MM lub null). Użyj TYLKO dat obecnych w tekście — nie wymyślaj. "
+    "all_day (bool), start_time (HH:MM lub null). Użyj TYLKO dat obecnych w tekście, nie wymyślaj. "
     "Odpowiedz TYLKO tablicą JSON."
 )
 # (note_text, must_dates, forbidden_count_over), dates that MUST appear; extra invented dates = hallucination

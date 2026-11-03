@@ -213,7 +213,7 @@ def run_service() -> None:  # pragma: no cover (entrypoint)
     if rt.whatsapp and rt.whatsapp.status()["paired"]:
         rt.whatsapp.start()
     elif s.whatsapp_enabled:
-        log.info("whatsapp enabled but not paired — open the web UI to scan the QR")
+        log.info("whatsapp enabled but not paired, open the web UI to scan the QR")
 
     app = create_app(agent=rt.agent, confirm=rt.confirm, whatsapp=rt.whatsapp, store=rt.store,
                      triage=rt.triage, contacts=rt.contacts)

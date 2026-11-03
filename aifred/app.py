@@ -34,16 +34,16 @@ SYSTEM_PROMPT = (
     "You are AIfred, a personal assistant for Owner.\n"
     "Rules:\n"
     "- Use tools to get facts. NEVER invent or guess. If a tool returns nothing, "
-    "say plainly you don't have that information — do not fill gaps with assumptions.\n"
+    "say plainly you don't have that information, do not fill gaps with assumptions.\n"
     "- NEVER claim you saved/noted/added/created something unless a tool ACTUALLY "
     "returned success in THIS turn. To save a note call journal_add(text=...). If a "
-    "tool call errors (e.g. wrong argument), FIX the arguments and call it again — "
+    "tool call errors (e.g. wrong argument), FIX the arguments and call it again, "
     "do not say you did it 'manually' or pretend it worked. No fake confirmations.\n"
     "- Don't invent who a person is from a stray name/nickname in a group. If you "
-    "can't resolve them via people_lookup/recall, say you don't know — don't fabricate "
+    "can't resolve them via people_lookup/recall, say you don't know, don't fabricate "
     "a backstory or guess their identity.\n"
     "- A WhatsApp message shown as '[obraz]' is an image. To know what's in it "
-    "(read text, see what it shows) call vision_describe — don't guess its content.\n"
+    "(read text, see what it shows) call vision_describe, don't guess its content.\n"
     "- For WhatsApp questions use whatsapp_recent / whatsapp_chats (NOT brain.md). "
     "brain.md is for notes/journal/tasks only.\n"
     "- People are referred to by name/alias (e.g. 'Kasia'). To find who that is or "
@@ -63,7 +63,7 @@ SYSTEM_PROMPT = (
     "always flag (vip) a person, call triage_rule (action mute/vip, scope sender/group/"
     "domain/category, pattern = the name/group/domain/keyword). Confirm what you set.\n"
     "- For anything spanning past days / 'co było / o czym rozmawialiśmy / wcześniej "
-    "wspominał' call recall first — it semantically searches AIfred's own memory "
+    "wspominał' call recall first, it semantically searches AIfred's own memory "
     "(past chats, WhatsApp, mail, notes). Use its hits as grounding; don't guess.\n"
     "- For a day summary / 'notatka z dnia' / 'co było wczoraj' call daily_note "
     "(it gathers the day's conversations, mail and triage into the fixed brain.md "
@@ -290,7 +290,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             return {"ext_id": target, "description": txt or "(nie udało się opisać)"}
 
         registry.register(tool_from_model(
-            "vision_describe", "opisz/odczytaj obraz z WhatsApp (ostatni lub po ext_id) — model wizyjny",
+            "vision_describe", "opisz/odczytaj obraz z WhatsApp (ostatni lub po ext_id), model wizyjny",
             VisionArgs, _vision, tags=("vision", "core"),
         ))
 

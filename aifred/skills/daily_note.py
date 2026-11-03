@@ -35,7 +35,7 @@ NOTE_FORMAT = """# 📓 {date} ({weekday})
 - **Imię:** czego chciał/a, o co prosił/a, co ustalono (tylko skierowane do mnie)
 
 ## 📌 Do zrobienia
-- (otwarte prośby i zadania, które wypłynęły — z kontekstem)
+- (otwarte prośby i zadania, które wypłynęły, z kontekstem)
 
 ## ✅ Zrobione
 - (co zostało domknięte)
@@ -119,7 +119,7 @@ COMPOSE_PROMPT = (
     "{fmt}\n\n"
     "Zasady: pisz zwięźle, konkretnie, w 1. osobie z perspektywy właściciela. "
     "Pomiń sekcję, dla której nie ma treści (nie wypisuj pustych nagłówków). "
-    "Nie zmyślaj — używaj tylko podanych sygnałów. Nie dodawaj wstępu ani podsumowania."
+    "Nie zmyślaj, używaj tylko podanych sygnałów. Nie dodawaj wstępu ani podsumowania."
 )
 
 

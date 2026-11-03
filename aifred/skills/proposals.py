@@ -36,11 +36,11 @@ EXTRACT_PROMPT = (
     "Wyłuskaj z notatki wydarzenia do kalendarza. Dziś jest {today}. Dla każdego "
     "podaj: summary (krótki tytuł), date (YYYY-MM-DD), all_day (true jeśli bez "
     "konkretnej godziny), start_time i end_time (HH:MM, tylko gdy all_day=false), "
-    "evidence (DOSŁOWNY fragment notatki, z którego to wynika — żeby było wiadomo "
+    "evidence (DOSŁOWNY fragment notatki, z którego to wynika, żeby było wiadomo "
     "skąd i dlaczego). Uwzględnij rok {year} jeśli nie podano. "
-    "Pomiń rzeczy bez KONKRETNEJ daty dziennej — same nazwy dni typu „w piątek”, "
+    "Pomiń rzeczy bez KONKRETNEJ daty dziennej, same nazwy dni typu „w piątek”, "
     "„w przyszłym tygodniu” bez podanej daty POMIŃ, NIE zgaduj daty. "
-    "NIE wymyślaj — używaj tylko treści notatki. "
+    "NIE wymyślaj, używaj tylko treści notatki. "
     "Odpowiedz TYLKO tablicą JSON, np. "
     '[{{"summary":"Dentysta Zosia","date":"2026-06-09","all_day":false,'
     '"start_time":"16:40","end_time":"17:40",'
@@ -120,7 +120,7 @@ def event_to_payload(ev: dict, source: str, context_link: str) -> dict:
 
 def _summary_line(ev: dict) -> str:
     when = ev["date"] + ("" if ev.get("all_day") or not ev.get("start_time") else f" {ev['start_time']}")
-    return f"🗓️ {when} — {ev['summary']}"
+    return f"🗓️ {when}, {ev['summary']}"
 
 
 def propose_events(store, llm, text: str, today: str, source: str, context_link: str, batch_ref: str) -> list[dict]:

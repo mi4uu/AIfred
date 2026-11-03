@@ -1,4 +1,4 @@
-# secrets — V8: never commit secret values
+# secrets, V8: never commit secret values
 .env
 *.token.json
 *_token.json

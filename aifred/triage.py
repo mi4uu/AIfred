@@ -78,7 +78,7 @@ class TriageItem:
         who = self.person or self.sender
         ctx = " (grupa)" if self.is_group else ""
         head = self.subject or self.snippet[:60]
-        tail = f" — {self.why}" if self.why else ""
+        tail = f", {self.why}" if self.why else ""
         return f"[{self.source}{ctx}] {who}: {head}{tail}"
 
 
@@ -88,7 +88,7 @@ def _classify_prompt(owner: list[str]) -> str:
         f"You triage messages for {who} (the owner). For EACH item return importance "
         "(high/medium/low), needs_action (bool), directed_at_me (bool). "
         f"directed_at_me = is this addressed to {who} specifically or does it ask HIM to act? "
-        "Use the conversation context shown as 'earlier: …' to find the ADDRESSEE — don't rely "
+        "Use the conversation context shown as 'earlier: …' to find the ADDRESSEE, don't rely "
         "only on names. In a GROUP a message can be for the owner WITHOUT naming him: if the owner "
         "(shown as 'JA') asked/said something and THIS line answers or follows up on it, "
         "directed_at_me=true. A message clearly aimed at someone else (answers another person, or "
@@ -285,7 +285,7 @@ class TriageEngine:
         if _OTP.search(text):
             it.importance, it.needs_action, it.directed_at_me = "low", False, False
             if not it.why:
-                it.why = "kod jednorazowy/OTP — nie wymaga działania"
+                it.why = "kod jednorazowy/OTP, nie wymaga działania"
         elif _PHISH.search(text) and not known:
             # urgent-looking payment/verification mail from a stranger = scam, not action
             it.importance, it.needs_action, it.directed_at_me = "low", False, False
