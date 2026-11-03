@@ -11,18 +11,41 @@ run needs re-auth via authorize() to add gmail.readonly. Detection: scopes_ok
 from __future__ import annotations
 
 import json
+import os
 import stat
 from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
+_OWNER_ONLY = stat.S_IRUSR | stat.S_IWUSR
+
 
 def _write_secret(path: str | Path, content: str) -> None:
-    """Write a token/state file readable by the owner only (contains OAuth secrets)."""
+    """Write a token/state file readable by the owner only (contains OAuth secrets).
+
+    Creates the file with mode 0600 from the first open (not a write-then-chmod),
+    so there is no window where a permissive umask leaves it world-readable, then
+    renames it into place atomically.
+    """
     p = Path(path)
-    p.write_text(content)
-    p.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    tmp = p.with_name(f".{p.name}.tmp-{os.getpid()}")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, _OWNER_ONLY)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    tmp.replace(p)
+
+
+def _harden_perms(path: str | Path) -> None:
+    """Enforce owner-only perms on a token/state file that already exists,
+    e.g. one written before this hardening was added."""
+    p = Path(path)
+    if p.exists() and stat.S_IMODE(p.stat().st_mode) != _OWNER_ONLY:
+        p.chmod(_OWNER_ONLY)
 
 # V4: read-only gmail. Calendar full (manage). Contacts read-only for identity
 # (name<->email/phone). No gmail.send here by design.
@@ -48,6 +71,7 @@ def load_credentials(token_path: str | Path) -> Credentials:
     p = Path(token_path)
     if not p.exists():
         raise NeedsReauth(f"no token at {p}; run authorize()")
+    _harden_perms(p)
     info = json.loads(p.read_text())
     # check GRANTED scopes from the token file, not the requested SCOPES
     granted = set(info.get("scopes") or [])
@@ -111,6 +135,7 @@ def exchange_code(client_secret_path: str | Path, state_path: str | Path, code_o
     if not code:
         raise NeedsReauth("no authorization code found in input")
 
+    _harden_perms(state_path)
     state = json.loads(Path(state_path).read_text())
     flow = _flow(client_secret_path)
     flow.code_verifier = state["code_verifier"]

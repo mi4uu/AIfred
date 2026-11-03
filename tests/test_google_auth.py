@@ -1,11 +1,12 @@
 """T7 google auth tests. No network, scope gating only (V4, V9)."""
 
 import json
+import os
 import stat
 
 import pytest
 
-from aifred.google.auth import SCOPES, NeedsReauth, _write_secret, load_credentials, scopes_ok
+from aifred.google.auth import SCOPES, NeedsReauth, _harden_perms, _write_secret, load_credentials, scopes_ok
 
 
 class FakeCreds:
@@ -56,3 +57,52 @@ def test_write_secret_sets_owner_only_permissions(tmp_path):
     mode = stat.S_IMODE(p.stat().st_mode)
     assert mode == stat.S_IRUSR | stat.S_IWUSR
     assert p.read_text() == '{"token": "x"}'
+
+
+def test_write_secret_creates_file_owner_only_even_with_permissive_umask(tmp_path):
+    # The file must be born 0600, not written world-readable then chmod'd
+    # after the fact. A permissive umask (022, or even 0) must not widen it,
+    # because os.open's explicit mode wins over write_text's default mode.
+    p = tmp_path / "token.json"
+    old_umask = os.umask(0o000)
+    try:
+        _write_secret(p, '{"token": "x"}')
+    finally:
+        os.umask(old_umask)
+    mode = stat.S_IMODE(p.stat().st_mode)
+    assert mode == stat.S_IRUSR | stat.S_IWUSR
+
+
+def test_write_secret_leaves_no_tmp_file_behind(tmp_path):
+    p = tmp_path / "token.json"
+    _write_secret(p, "{}")
+    assert sorted(tmp_path.iterdir()) == [p]
+
+
+def test_harden_perms_fixes_a_preexisting_permissive_token(tmp_path):
+    p = tmp_path / "token.json"
+    p.write_text('{"token": "x"}')
+    p.chmod(0o644)  # simulate a token written before hardening existed
+    _harden_perms(p)
+    mode = stat.S_IMODE(p.stat().st_mode)
+    assert mode == stat.S_IRUSR | stat.S_IWUSR
+
+
+def test_load_credentials_hardens_existing_token_perms(tmp_path):
+    tok = tmp_path / "token.json"
+    tok.write_text(
+        json.dumps(
+            {
+                "token": "x",
+                "refresh_token": "y",
+                "client_id": "c",
+                "client_secret": "s",
+                "scopes": [],
+            }
+        )
+    )
+    tok.chmod(0o644)
+    with pytest.raises(NeedsReauth):
+        load_credentials(tok)  # insufficient scopes, but perms must be hardened first
+    mode = stat.S_IMODE(tok.stat().st_mode)
+    assert mode == stat.S_IRUSR | stat.S_IWUSR
