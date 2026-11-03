@@ -2,7 +2,7 @@
 
 ## §G: goal
 
-Personal life-assistant. Run local ollama model on hermes-agent runtime. Manage calendar+gmail, watch whatsapp+telegram+mail, keep brain.md journal/notes/tasks, surface important stuff, answer on web UI + telegram.
+Personal life-assistant. Run local ollama model on AIfred's own runtime (C2: Hermes is reference only). Manage calendar+gmail, watch whatsapp+telegram+mail, keep brain.md journal/notes/tasks, surface important stuff, answer on web UI + telegram.
 
 ## §C: constraints
 

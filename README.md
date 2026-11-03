@@ -1,117 +1,111 @@
 # AIfred
 
-A self-hosted personal assistant that runs on a local model, remembers things in [brain.md](https://github.com/mi4uu/brain.md), and keeps an eye on your WhatsApp, Gmail, Calendar and Telegram so you don't have to.
+[![CI](https://github.com/mi4uu/AIfred/actions/workflows/ci.yml/badge.svg)](https://github.com/mi4uu/AIfred/actions/workflows/ci.yml)
 
-AIfred is the agent. brain.md is its memory. They're built to work together: AIfred reads and writes your notes, journal and contacts through brain.md's MCP server, and brain.md gives it a searchable second brain that survives restarts and stays editable by you (or other tools) at any time. You need a running brain.md instance to use AIfred.
+A self-hosted personal assistant that runs on a local model and watches your WhatsApp, Gmail, Calendar, and Telegram so you don't have to check them yourself.
 
-Everything runs on your own machine. The model is local (ollama), the data stays local, and any cloud fallback is off unless you turn it on.
+AIfred is the agent. [brain.md](https://github.com/mi4uu/brain.md) is its memory: a local-first Markdown vault with a built-in MCP server. AIfred reads and writes your notes, journal, and contacts through that server, so your data lives in files you can open and edit yourself, not in a database only AIfred understands. You need a running brain.md instance to use AIfred; the two are separate projects built to work together.
 
-## Why it exists
+Everything runs on your own machine. The model is local (Ollama), the data stays local, and cloud fallback is off until you turn it on.
 
-Most assistants either live in the cloud with your private data, or they're a thin wrapper that dumps everything into a giant prompt and hopes the model sorts it out. AIfred takes the opposite line:
+## What it does in practice
 
-- **Local first.** Your messages, mail and notes never leave the box. The default model is `qwen3.6:27b` on ollama.
-- **Code-first, LLM-last.** Filtering, ranking, identity resolution and parsing are done in plain code. The model only sees a short, relevant shortlist, never a raw data dump. Turn context stays under 16k tokens on purpose.
-- **Verified, not vibes.** There's a small evaluation harness (`aifred/eval`) with golden cases drawn from real data. Model and sampling choices are decided by measured hallucination and accuracy, and a change that raises hallucination doesn't ship.
+- Reads Gmail and manages your calendar. Mail access is read-only by default, and every calendar event it creates cites the note or message it came from.
+- Watches WhatsApp, works out who's who from your Google contacts and brain.md, and learns that different people call you different things.
+- Triages mail and messages in the background and pushes only what needs you to Telegram. One-time codes, newsletters, and phishing-shaped mail are filtered out by code, never left to the model to judge.
+- Proposes calendar events from notes ("dentist on the 9th at 16:40") over Telegram with Yes/No buttons. Nothing lands on your calendar without a tap.
+- Captures messages you send to yourself on WhatsApp into brain.md instead of dropping them.
+- Answers questions about your own history ("what did Kasia ask me to buy last week") using a small retrieval layer over your past conversations, mail, and notes.
+- Learns from correction: mute a sender, mark someone important, teach it a nickname, and it remembers.
 
-## What it does
+You talk to it through a web UI or Telegram; both go through the same agent loop.
 
-- **Reads your Gmail and manages your Calendar.** Read-only mail by default; calendar events always cite where they came from.
-- **Watches WhatsApp**, including family groups, and works out who's who. WhatsApp now hands out `@lid` IDs instead of phone numbers, so AIfred resolves them back to real numbers and matches them against your Google contacts and brain.md people. It also learns that different people call you different things (your partner says "kotek", nobody else does).
-- **Triages quietly in the background.** Every few minutes it pulls new mail and messages, decides what actually needs you, and pushes only that to Telegram. Group chatter aimed at someone else stays quiet. One-time codes, newsletters and phishing-shaped "verify your payment" mail are filtered out by code, not left to the model.
-- **Asks before it acts.** When it spots a date in a note ("dentist on the 9th at 16:40"), it proposes a calendar event over Telegram with Yes/No buttons and a link back to the source note. Nothing lands on your calendar without a tap.
-- **Treats your self-chat as an inbox.** Messages you send to yourself on WhatsApp (notes, forwards) are captured to brain.md instead of being dropped.
-- **Remembers across days.** A small in-engine retrieval layer (a 0.6B embedder running alongside the chat model) indexes your own conversations, mail and notes, so it can answer "what did Kasia ask me to buy last week" without re-reading everything.
-- **Reads images and documents when needed.** A vision model is loaded on demand to read a screenshot or photo, and Google Docs/Sheets links are pulled in through Drive export.
-- **Writes a structured daily note** and keeps your contact book current on its own.
-- **Learns from you.** Correct it in chat, in the web UI, or after the fact: mute a sender, mark someone as important, teach it a nickname. Uncertain calls go to a "to decide" queue where your answer becomes a rule.
+## Screenshot
 
-You talk to it through a web UI or Telegram. Both go through the same agent.
+![AIfred web UI showing a chat session, an attention feed, and importance rules, all seeded with placeholder data](docs/screenshot.png)
 
-## How it fits with brain.md
-
-brain.md is a local-first markdown vault with a built-in MCP server and semantic search. AIfred uses it as the single source of truth for anything worth keeping: journal entries, the daily note, people, tasks. Reads go through brain.md's retrieval, so the model sees relevant chunks rather than whole files.
-
-Because brain.md is shared and editable, AIfred treats it as live. It re-reads your contacts each cycle, so a number or nickname you add by hand (or another tool adds) shows up without a restart.
-
-Want the memory without the assistant? Run brain.md on its own. Want the assistant? You'll need brain.md too.
-
-## Architecture
-
-```
-Telegram  ─┐                         ┌─ ollama: qwen3.6:27b    (agent: text + tools)
-Web UI    ─┼─ FastAPI agent loop ────┼─ ollama: qwen3-vl:8b     (vision, on demand)
-WhatsApp  ─┤   router + typed tools  ├─ ollama: qwen3-embedding (semantic memory)
-Gmail/Cal ─┘                         └─ brain.md MCP            (notes / journal / people)
-                     │
-                  SQLite  (scratch: messages, cursors, attention, embeddings)
-```
-
-- **Agent**: `qwen3.6:27b` drives the tools. It's the one model that stayed reliable at multi-tool use in testing. Smaller vision models passed isolated checks but fell over in the full loop, so vision is a separate on-demand call instead.
-- **Vision**: `qwen3-vl:8b` loads only when an image needs reading, then frees the memory again.
-- **Memory**: a `qwen3-embedding:0.6b` model stays resident next to the chat model (set `OLLAMA_MAX_LOADED_MODELS=2`) so retrieval never evicts the agent.
-- **Store**: SQLite is the working scratch layer (incoming messages, cursors, triage output, embeddings). brain.md is canonical for notes.
-
-Design notes, constraints and the full list of invariants live in [`SPEC.md`](SPEC.md). It's written in a compact spec format and is the best place to understand why things are the way they are.
+Seeded with placeholder data, no real accounts connected. Run `uv run python docs/demo_seed.py` to reproduce it locally.
 
 ## Requirements
 
-- [ollama](https://ollama.com) with the models you want (`qwen3.6:27b`, optionally `qwen3-vl:8b-instruct-q8_0` for vision and `qwen3-embedding:0.6b` for memory)
-- A running [brain.md](https://github.com/mi4uu/brain.md) instance and an API key
-- Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
-- [`bun`](https://bun.sh) to build the web UI (skip it if you only want the API/Telegram)
-- Optional: Google OAuth credentials (Gmail read, Calendar, Drive read, Contacts), a Telegram bot token, a WhatsApp account to pair
+- [Ollama](https://ollama.com) with the models you want: `qwen3.6:27b` for the agent, and optionally `qwen3-vl:8b-instruct-q8_0` for vision and `qwen3-embedding:0.6b` for memory.
+- A running [brain.md](https://github.com/mi4uu/brain.md) instance and an API key.
+- Python 3.11 or later and [uv](https://docs.astral.sh/uv/).
+- [Bun](https://bun.sh) to build the web UI. Skip it if you only want the API and Telegram.
+- Optional: Google OAuth credentials (Gmail read, Calendar, Drive read, Contacts), a Telegram bot token, a WhatsApp account to pair.
 
-## Quick start
+## Quickstart
 
 ```bash
 uv sync
-cp .env.example .env        # fill in the brain.md URL + key, and whatever channels you want
-uv run pytest               # sanity check
+cp .env.example .env        # fill in the brain.md URL and key, plus any channels you want
+uv run pytest                # sanity check
 
-cd web && bun install && bun run build && cd ..   # builds web/dist, served by the backend below
+cd web && bun install && bun run build && cd ..   # builds web/dist, served by the backend
 
-# point ollama at a 16k context window so prompts aren't silently truncated:
-#   OLLAMA_CONTEXT_LENGTH=16384   (and OLLAMA_MAX_LOADED_MODELS=2 if you use memory)
-
-uv run aifred               # web UI (from web/dist) + API on http://127.0.0.1:9120
+uv run aifred                # web UI (from web/dist) + API on http://127.0.0.1:9120
 ```
 
-The web UI is a separate [bun](https://bun.sh)/vite build (`web/`); `uv run aifred` only serves `web/dist` if it already exists, it doesn't build it. Skip the `bun` step if you only want the API and Telegram.
+`uv run aifred` serves `web/dist` if it exists; it doesn't build it. The `bun run build` step is required the first time and after any frontend change, or you get the API with no UI.
 
-Run it as an always-on service with the unit in `deploy/`:
+Point Ollama at a 16k context window so prompts don't get silently truncated: set `OLLAMA_CONTEXT_LENGTH=16384` on the Ollama service, and `OLLAMA_MAX_LOADED_MODELS=2` if you use the memory embedder, so it never evicts the agent model.
+
+To run it as an always-on service, use the systemd unit in `deploy/`:
 
 ```bash
 systemctl --user enable --now aifred
 ```
 
-It binds to localhost. Put it behind a Cloudflare tunnel (or similar) if you want it reachable from your phone. WhatsApp pairing happens in the web UI: it shows a QR code you scan once, and the session persists.
+AIfred binds to localhost. Put it behind a tunnel (Cloudflare or similar) to reach it from your phone. WhatsApp pairing happens in the web UI: it shows a QR code once, and the session persists after that.
 
 ## Configuration
 
-All settings are environment variables, read from `.env`. Secrets stay there and never touch the code, the spec or the logs. `.env.example` has the full list. The essentials:
+All settings are environment variables, read from `.env`; see `.env.example` for the full list. Secrets stay there and never touch the code, the spec, or the logs.
 
 | Variable | What it's for |
 |---|---|
-| `AIFRED_MODEL` | agent model (default `qwen3.6:27b`) |
-| `AIFRED_BRAINMD_MCP_URL`, `MCP_BRAIN_MD_API_KEY` | your brain.md instance |
-| `AIFRED_GOOGLE_TOKEN_PATH`, `AIFRED_GOOGLE_CLIENT_SECRET_PATH` | Gmail / Calendar / Drive / Contacts |
-| `AIFRED_TELEGRAM_BOT_TOKEN`, `AIFRED_TELEGRAM_ALLOWED_USERS` | Telegram channel (push + chat) |
-| `AIFRED_WHATSAPP_ENABLED` | turn WhatsApp on, then pair from the web UI |
-| `AIFRED_VISION_MODEL`, `AIFRED_EMBED_MODEL` | on-demand vision and the memory embedder |
+| `AIFRED_MODEL` | Agent model, default `qwen3.6:27b` |
+| `AIFRED_BRAINMD_MCP_URL`, `MCP_BRAIN_MD_API_KEY` | Your brain.md instance |
+| `AIFRED_GOOGLE_TOKEN_PATH`, `AIFRED_GOOGLE_CLIENT_SECRET_PATH` | Gmail, Calendar, Drive, Contacts |
+| `AIFRED_TELEGRAM_BOT_TOKEN`, `AIFRED_TELEGRAM_ALLOWED_USERS` | Telegram channel: push and chat |
+| `AIFRED_WHATSAPP_ENABLED` | Turns WhatsApp on; pair from the web UI |
+| `AIFRED_VISION_MODEL`, `AIFRED_EMBED_MODEL` | On-demand vision and the memory embedder |
+| `AIFRED_WEB_TOKEN` | If set, required as the `X-AIfred-Token` header on every `/api/*` call |
 
-Every channel is optional. With nothing but brain.md configured, AIfred still runs as a notes-and-chat assistant and tells you which subsystems are off.
+Every channel is optional. With only brain.md configured, AIfred still runs as a notes-and-chat assistant and tells you which subsystems are off.
 
-## Privacy
+## How it uses brain.md
 
-Your data stays on your machine. The model is local, WhatsApp and mail are processed locally, and the cloud fallback (`AIFRED_CLOUD_FALLBACK_ENABLED`) is off by default. WhatsApp groups and a full mailbox are sensitive, so AIfred can run fully offline if that's what you want. Telegram is gated to an allowed-users list, and actions that reach the outside world wait for your confirmation.
+brain.md is the single source of truth for anything worth keeping: journal entries, the daily note, people, tasks. AIfred reads it through brain.md's own retrieval, so the model sees relevant chunks, not whole files, and re-reads your contacts each cycle so a number or nickname you add by hand (or another tool adds) shows up without a restart.
+
+Run brain.md on its own if you only want the memory. Run AIfred if you want the assistant too; it needs brain.md either way.
+
+## Safety model
+
+What AIfred can do on its own: read Gmail and WhatsApp, read and write your calendar, read and write brain.md notes and journal entries, and message you on Telegram.
+
+What it cannot do without you tapping a button first: send mail, send a WhatsApp message on your behalf, or create a calendar event it proposed from a note. Those go out as a Telegram prompt with Yes/No buttons, and the reason it proposed them, and wait for your confirmation.
+
+Cloud fallback (`AIFRED_CLOUD_FALLBACK_ENABLED`) is off by default; the model, your mail, and your WhatsApp history stay on your machine unless you turn it on. Telegram access is gated to an allowed-users list.
+
+## Development
+
+```bash
+uv run pytest           # tests
+uv run ruff check .     # lint
+uv run mypy aifred      # types
+```
+
+CI runs all three on Python 3.11 and 3.12, on every push and pull request.
+
+Design notes, constraints, and the full list of invariants live in [SPEC.md](SPEC.md), written in a compact spec format.
 
 ## Status
 
-AIfred works and is in daily use, but it's young and shaped around one person's setup, so expect rough edges. The eval harness (`uv run python -m aifred.eval.run`) and the invariants in `SPEC.md` are the guard rails that keep it honest as it changes.
+AIfred works and is in daily use, but it's young and shaped around one person's setup, so expect rough edges. The eval harness (`uv run python -m aifred.eval.run`) and the invariants in `SPEC.md` are what keep it honest as it changes.
 
 Issues and contributions are welcome. If you already run brain.md and a local model, it might save you some time too.
 
-## Licence
+## License
 
 AGPL-3.0-or-later, matching brain.md.
