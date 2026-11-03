@@ -146,7 +146,8 @@ export function App() {
         <Flex justify="between" align="center" mb="3">
           <Flex align="center" gap="2">
             <Avatar size="2" radius="full" src="/alfred.png" fallback="🎩" />
-            <Heading size="4">AIfred</Heading>
+            {/* In Inter a capital I next to l-shaped glyphs reads as "Alfred"; the accent keeps "AI" legible. */}
+            <Heading size="4"><Text color="iris">AI</Text>fred</Heading>
           </Flex>
           <IconButton size="1" onClick={startNew} title="Nowa sesja">
             <PlusIcon />
