@@ -18,9 +18,6 @@ import re
 
 log = logging.getLogger("aifred.proposals")
 
-# Warsaw is +01:00 winter / +02:00 summer. Good enough for owner-local stamps.
-TZ_OFFSET = "+02:00"
-
 
 def brain_web_link(web_url: str, mcp_url: str, path: str, anchor: str = "") -> str:
     """Human URL for a brain.md note (best-effort). web_url overrides; else derive
@@ -69,7 +66,9 @@ def extract_events(llm, text: str, today: str) -> list[dict]:
 
 
 def _rfc3339(date: str, hm: str) -> str:
-    return f"{date}T{hm}:00{TZ_OFFSET}"
+    from aifred.tz import offset_for_date
+
+    return f"{date}T{hm}:00{offset_for_date(date)}"
 
 
 def _next_hm(hm: str) -> str:

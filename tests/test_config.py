@@ -8,6 +8,7 @@ def test_defaults():
     assert s.model == "qwen3.6:27b"
     assert s.ollama_base_url == "http://localhost:11434/v1"
     assert s.cloud_fallback_enabled is False  # V1/C6: opt-in only
+    assert s.timezone == "Europe/Warsaw"  # V35: owner-local dates/times
 
 
 def test_ctx_budget_default_16k():

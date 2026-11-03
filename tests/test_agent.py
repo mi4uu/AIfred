@@ -4,13 +4,15 @@ Covers V14 router scoping, tool dispatch, V7 confirm gate, V9 fail-loud.
 """
 
 import json
+from datetime import datetime
 
 from pydantic import BaseModel
 
-from aifred.agent.loop import AgentLoop
+from aifred.agent.loop import AgentLoop, _now_hint
 from aifred.agent.router import IntentRouter
 from aifred.tools.base import tool_from_model
 from aifred.tools.registry import ToolRegistry
+from aifred.tz import get_timezone
 
 
 class EchoArgs(BaseModel):
@@ -79,6 +81,20 @@ def test_side_effecting_denied_without_confirm():
     loop = AgentLoop(llm=llm, registry=r, router=IntentRouter(r))  # default deny (V7)
     out = loop.run("send mail")
     assert any("DENIED" in m.get("content", "") for m in out["messages"] if m.get("role") == "tool")
+
+
+def test_now_hint_uses_cet_offset_in_winter(monkeypatch):
+    winter = datetime(2026, 11, 3, 9, 30, tzinfo=get_timezone("Europe/Warsaw"))
+    monkeypatch.setattr("aifred.tz.datetime", type("D", (), {"now": staticmethod(lambda tz: winter)}))
+    hint = _now_hint("Europe/Warsaw")
+    assert "2026-11-03" in hint and "+01:00" in hint
+
+
+def test_now_hint_uses_cest_offset_in_summer(monkeypatch):
+    summer = datetime(2026, 7, 3, 9, 30, tzinfo=get_timezone("Europe/Warsaw"))
+    monkeypatch.setattr("aifred.tz.datetime", type("D", (), {"now": staticmethod(lambda tz: summer)}))
+    hint = _now_hint("Europe/Warsaw")
+    assert "2026-07-03" in hint and "+02:00" in hint
 
 
 def test_side_effecting_allowed_with_confirm():

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     repeat_penalty: float = Field(default=1.0, alias="AIFRED_REPEAT_PENALTY")
     min_p: float = Field(default=0.0, alias="AIFRED_MIN_P")
     cloud_fallback_enabled: bool = Field(default=False, alias="AIFRED_CLOUD_FALLBACK_ENABLED")  # V1/C6 opt-in
+    timezone: str = Field(default="Europe/Warsaw", alias="AIFRED_TIMEZONE")  # owner-local dates/times (V35)
     # in-engine RAG (V31) — standalone embedder, resident alongside chat (MAX_LOADED_MODELS=2)
     rag_enabled: bool = Field(default=True, alias="AIFRED_RAG_ENABLED")
     embed_model: str = Field(default="qwen3-embedding:0.6b", alias="AIFRED_EMBED_MODEL")

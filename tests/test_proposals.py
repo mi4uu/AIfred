@@ -42,6 +42,17 @@ def test_event_to_payload_timed_and_allday():
     assert allday["start"] == "2026-06-16" and allday["end"] == "2026-06-17"  # date-only, end exclusive
 
 
+def test_event_to_payload_winter_date_uses_cet_offset():
+    """DST regression (V35): a winter date must get +01:00, not a hardcoded
+    summer +02:00."""
+    winter = event_to_payload(
+        {"summary": "Dentysta", "date": "2026-11-03", "all_day": False, "start_time": "09:00"},
+        "src", "",
+    )
+    assert winter["start"] == "2026-11-03T09:00:00+01:00"
+    assert winter["end"] == "2026-11-03T10:00:00+01:00"
+
+
 def test_extract_events_filters_bad():
     llm = FakeLLM([
         {"summary": "Dentysta", "date": "2026-06-09", "start_time": "16:40"},

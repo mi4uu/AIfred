@@ -98,15 +98,17 @@ class AgentLoop:
 _WEEKDAYS = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
 
 
-def _now_hint() -> str:
-    """Current date/time in the owner's timezone (Europe/Warsaw) so the model
-    builds correct calendar dates instead of guessing the year (V35)."""
-    from datetime import datetime, timedelta, timezone
+def _now_hint(tz_name: str | None = None) -> str:
+    """Current date/time in the owner's configured timezone (AIFRED_TIMEZONE,
+    default Europe/Warsaw) so the model builds correct calendar dates instead
+    of guessing the year (V35). Offset is resolved per-date via zoneinfo, so
+    it's correct in both CET (winter) and CEST (summer)."""
+    from aifred.tz import now_in_tz, offset_str
 
-    now = datetime.now(timezone.utc) + timedelta(hours=2)  # Warsaw (summer)
+    now = now_in_tz(tz_name)
     return (f"Aktualna data: {now.strftime('%Y-%m-%d')} ({_WEEKDAYS[now.weekday()]}), "
             f"godzina {now.strftime('%H:%M')}. Dla wydarzeń w kalendarzu używaj RFC3339 "
-            f"ze strefą +02:00 i ZAWSZE bieżącego roku ({now.year}) o ile nie podano innego.")
+            f"ze strefą {offset_str(now)} i ZAWSZE bieżącego roku ({now.year}) o ile nie podano innego.")
 
 
 def _parse_args(raw):
