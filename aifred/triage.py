@@ -154,7 +154,7 @@ class TriageEngine:
             newest = max(newest, r["id"])
             sender = r["sender"]
             chat_id = r["chat_id"]
-            own = (("from_me" in r and r["from_me"]) or
+            own = (bool(r["from_me"]) or
                    (self.owner_lid and re.sub(r"\D", "", sender or "") == self.owner_lid))
             self_chat = self._is_self_chat(chat_id)
             # own message in someone ELSE's chat = your side of a convo -> skip (V22).

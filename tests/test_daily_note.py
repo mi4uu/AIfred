@@ -70,6 +70,22 @@ def test_gather_day_groups_and_excludes_owner():
     s.close()
 
 
+def test_gather_day_excludes_from_me_even_when_contacts_dont_know_sender():
+    # from_me=True but sender isn't recognised by is_owner: must still be
+    # excluded on the from_me flag alone, not on a contacts/is_owner match.
+    from datetime import datetime
+
+    s = Store(":memory:")
+    day_ms = datetime.strptime(DAY, "%Y-%m-%d").replace(tzinfo=UTC).timestamp() * 1000
+    s.add_message("whatsapp", "31061", "w1", ts=day_ms + 3600_000, body="kup mleko",
+                  sender="31061", sender_name="Katarzyna")
+    s.add_message("whatsapp", "31061", "w2", ts=day_ms + 3700_000, body="wyslane z innego urzadzenia",
+                  sender="999888777", sender_name="Linked device", from_me=True)
+    sig = gather_day(s, FakeContacts(), DAY)
+    assert sig["communication"] == {"❤️ Katarzyna (Kasia)": ["kup mleko"]}
+    s.close()
+
+
 def test_compose_writes_structured_note():
     s = Store(":memory:")
     _seed(s)

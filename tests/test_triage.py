@@ -182,6 +182,19 @@ def test_collect_skips_owner_own_messages():
     assert [i.ext_id for i in items] == ["w2"]
 
 
+def test_collect_skips_from_me_even_with_unrecognised_sender():
+    # from_me=True but sender isn't the owner_lid and isn't self-chat: must still
+    # be skipped on the from_me flag alone, not on a sender/owner_lid match.
+    s = Store(":memory:")
+    s.add_message("whatsapp", "31061", "w1", ts=1.0, body="wyslane z innego urzadzenia",
+                  sender="999888777", sender_name="Linked device", from_me=True)
+    s.add_message("whatsapp", "31061", "w2", ts=2.0, body="kup mleko", sender="31061",
+                  sender_name="Katarzyna")
+    eng = TriageEngine(s, FakeLLM({}), contacts=FakeContacts(), owner_lid="100000000000001")
+    items = eng.collect_whatsapp()
+    assert [i.ext_id for i in items] == ["w2"]
+
+
 def test_collect_skips_owner_by_lid_without_flag():
     s = Store(":memory:")  # old row: from_me not set, but sender == owner lid
     s.add_message("whatsapp", "60155", "w1", ts=1.0, body="dziekuje", sender="100000000000001", sender_name="Sówka")

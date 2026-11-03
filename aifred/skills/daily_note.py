@@ -74,7 +74,7 @@ def gather_day(store, contacts, day: str, limit: int = 800) -> dict:
     lo, hi = _day_bounds(day)
     convo: dict[str, list[str]] = {}
     for r in store.recent_messages("whatsapp", limit=limit):
-        if "from_me" in r and r["from_me"]:  # noqa: RUF019 -- r is a sqlite3.Row, no .get()
+        if r["from_me"]:
             continue
         ts = _norm_ts(r["ts"])
         if not (lo <= ts < hi):
