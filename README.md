@@ -59,6 +59,7 @@ Design notes, constraints and the full list of invariants live in [`SPEC.md`](SP
 - [ollama](https://ollama.com) with the models you want (`qwen3.6:27b`, optionally `qwen3-vl:8b-instruct-q8_0` for vision and `qwen3-embedding:0.6b` for memory)
 - A running [brain.md](https://github.com/mi4uu/brain.md) instance and an API key
 - Python 3.11+ and [`uv`](https://docs.astral.sh/uv/)
+- [`bun`](https://bun.sh) to build the web UI (skip it if you only want the API/Telegram)
 - Optional: Google OAuth credentials (Gmail read, Calendar, Drive read, Contacts), a Telegram bot token, a WhatsApp account to pair
 
 ## Quick start
@@ -68,11 +69,15 @@ uv sync
 cp .env.example .env        # fill in the brain.md URL + key, and whatever channels you want
 uv run pytest               # sanity check
 
+cd web && bun install && bun run build && cd ..   # builds web/dist, served by the backend below
+
 # point ollama at a 16k context window so prompts aren't silently truncated:
 #   OLLAMA_CONTEXT_LENGTH=16384   (and OLLAMA_MAX_LOADED_MODELS=2 if you use memory)
 
-uv run aifred               # web UI + API on http://127.0.0.1:9120
+uv run aifred               # web UI (from web/dist) + API on http://127.0.0.1:9120
 ```
+
+The web UI is a separate [bun](https://bun.sh)/vite build (`web/`); `uv run aifred` only serves `web/dist` if it already exists, it doesn't build it. Skip the `bun` step if you only want the API and Telegram.
 
 Run it as an always-on service with the unit in `deploy/`:
 
