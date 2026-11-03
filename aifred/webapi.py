@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from aifred.confirm import ConfirmManager
+from aifred.tools.base import ToolError
 
 HEARTBEAT_S = 10  # SSE keep-alive ping interval (defeats proxy idle timeout)
 
@@ -34,6 +35,7 @@ class ChatIn(BaseModel):
 class ConfirmIn(BaseModel):
     token: str
     approve: bool = True
+    always: bool = False  # explicit opt-in: also preauthorize this tool for future calls
 
 
 class RenameIn(BaseModel):
@@ -61,7 +63,9 @@ def make_api(
     router = APIRouter(prefix="/api")
 
     def auth(x_aifred_token: str = Header(default="")) -> None:
-        if web_token and not hmac.compare_digest(x_aifred_token, web_token):
+        # compare as bytes: hmac.compare_digest on str raises on non-ASCII input,
+        # which would turn a malformed header into a 500 instead of a 401
+        if web_token and not hmac.compare_digest(x_aifred_token.encode(), web_token.encode()):
             raise HTTPException(status_code=401, detail="bad token")
 
     def _need_store() -> Any:
@@ -173,10 +177,18 @@ def make_api(
             p = confirm.approve(body.token)
         except KeyError:
             raise HTTPException(status_code=404, detail="unknown token") from None
-        if body.approve:
-            confirm.pre_authorize(p.tool)  # allow retried call (V7)
-            return {"status": "approved", "tool": p.tool}
-        return {"status": "rejected", "tool": p.tool}
+        if not body.approve:
+            return {"status": "rejected", "tool": p.tool}
+        if body.always:
+            confirm.pre_authorize(p.tool)  # explicit opt-in, separate from this one approval
+        registry = getattr(agent, "registry", None)
+        if registry is None:
+            return {"status": "approved", "tool": p.tool, "result": None}
+        try:
+            result = registry.dispatch(p.tool, p.args)  # run the exact approved args, once (V7)
+        except ToolError as e:
+            return {"status": "approved", "tool": p.tool, "error": str(e)}
+        return {"status": "approved", "tool": p.tool, "result": result}
 
     # ---- settings (runtime-tunable triage cadence) ----
     @router.get("/settings", dependencies=[Depends(auth)])

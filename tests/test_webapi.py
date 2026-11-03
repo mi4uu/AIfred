@@ -38,18 +38,72 @@ def test_auth_required_when_token_set(monkeypatch):
     # same length, wrong value: constant-time compare still rejects it
     wrong = c.post("/api/chat", json={"message": "hi"}, headers={"X-AIfred-Token": "xxxxxx"})
     assert wrong.status_code == 401
+    # malformed (non-ASCII) header must reject with 401, not crash with 500.
+    # Raw bytes bypass the test client's own ascii-only str header encoding,
+    # the same way a hostile or just-broken client's header would arrive.
+    malformed = c.post("/api/chat", json={"message": "hi"},
+                        headers={"X-AIfred-Token": b"\xe9\xe9\xe9\xe9\xe9\xe9"})
+    assert malformed.status_code == 401
     get_settings.cache_clear()
 
 
-def test_confirm_flow_preauthorizes():
+class FakeRegistry:
+    """Records dispatch calls, like ToolRegistry but no real tools needed."""
+
+    def __init__(self):
+        self.calls = []
+
+    def dispatch(self, name, args):
+        self.calls.append((name, args))
+        return {"ok": True, "echo": args}
+
+
+class FakeAgentWithRegistry(FakeAgent):
+    def __init__(self):
+        self.registry = FakeRegistry()
+
+
+def test_confirm_approve_executes_the_exact_pending_args_once():
     cm = ConfirmManager(mode="ask")
-    cm.hook("calendar_create", {"summary": "x"})  # stage pending
+    cm.hook("calendar_create", {"summary": "x", "start": "2026-06-09T16:40:00+02:00"})
     token = cm.list_pending()[0].token
-    app = create_app(agent=FakeAgent(), confirm=cm)
+    fake_agent = FakeAgentWithRegistry()
+    app = create_app(agent=fake_agent, confirm=cm)
     c = TestClient(app)
     r = c.post("/api/confirm", json={"token": token, "approve": True})
-    assert r.status_code == 200 and r.json()["status"] == "approved"
-    assert "calendar_create" in cm.preauth  # V7 retried call now allowed
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "approved"
+    assert body["result"] == {"ok": True, "echo": {"summary": "x", "start": "2026-06-09T16:40:00+02:00"}}
+    # executed the exact approved args, exactly once
+    assert fake_agent.registry.calls == [("calendar_create", {"summary": "x", "start": "2026-06-09T16:40:00+02:00"})]
+    # a single approval does NOT blanket-preauthorize the tool for future calls
+    assert "calendar_create" not in cm.preauth
+
+
+def test_confirm_approve_with_always_also_preauthorizes():
+    cm = ConfirmManager(mode="ask")
+    cm.hook("calendar_create", {"summary": "x"})
+    token = cm.list_pending()[0].token
+    fake_agent = FakeAgentWithRegistry()
+    app = create_app(agent=fake_agent, confirm=cm)
+    c = TestClient(app)
+    r = c.post("/api/confirm", json={"token": token, "approve": True, "always": True})
+    assert r.status_code == 200
+    assert "calendar_create" in cm.preauth  # explicit opt-in, not the default
+
+
+def test_confirm_reject_does_not_dispatch():
+    cm = ConfirmManager(mode="ask")
+    cm.hook("calendar_create", {"summary": "x"})
+    token = cm.list_pending()[0].token
+    fake_agent = FakeAgentWithRegistry()
+    app = create_app(agent=fake_agent, confirm=cm)
+    c = TestClient(app)
+    r = c.post("/api/confirm", json={"token": token, "approve": False})
+    assert r.status_code == 200 and r.json()["status"] == "rejected"
+    assert fake_agent.registry.calls == []
+    assert "calendar_create" not in cm.preauth
 
 
 def test_no_api_when_no_agent():
@@ -59,14 +113,27 @@ def test_no_api_when_no_agent():
     assert c.get("/health").status_code == 200
 
 
-def _client_with_store(tmp_path):
+class HistoryRecordingAgent(FakeAgent):
+    """Like FakeAgent, but remembers the `history` it was called with each
+    turn, so a test can assert on the exact prior conversation it received."""
+
+    def __init__(self):
+        self.history_calls = []
+
+    def run(self, message, history=None, on_step=None):
+        self.history_calls.append(history)
+        return super().run(message, history=history, on_step=on_step)
+
+
+def _client_with_store(tmp_path, agent=None):
     store = Store(str(tmp_path / "s.db"))
-    app = create_app(agent=FakeAgent(), confirm=ConfirmManager(), store=store)
-    return TestClient(app), store
+    agent = agent or FakeAgent()
+    app = create_app(agent=agent, confirm=ConfirmManager(), store=store)
+    return TestClient(app), store, agent
 
 
 def test_sessions_crud(tmp_path):
-    c, store = _client_with_store(tmp_path)
+    c, store, _agent = _client_with_store(tmp_path)
     assert c.get("/api/sessions").json()["sessions"] == []
     sid = c.post("/api/sessions").json()["id"]
     assert len(c.get("/api/sessions").json()["sessions"]) == 1
@@ -78,7 +145,7 @@ def test_sessions_crud(tmp_path):
 
 
 def test_chat_stream_sse_events_and_persist(tmp_path):
-    c, store = _client_with_store(tmp_path)
+    c, store, _agent = _client_with_store(tmp_path)
     r = c.post("/api/chat/stream", json={"message": "kim jesteś?"})
     assert r.status_code == 200
     assert "text/event-stream" in r.headers["content-type"]
@@ -98,7 +165,7 @@ def test_chat_stream_sse_events_and_persist(tmp_path):
 
 
 def test_review_queue_decision_creates_rule(tmp_path):
-    c, store = _client_with_store(tmp_path)
+    c, store, _agent = _client_with_store(tmp_path)
     meta = json.dumps({"source": "whatsapp", "sender": "48500", "person": "Anna",
                        "domain": "", "is_group": False, "suggest": "high"})
     store.add_attention("triage:whatsapp", "medium", "[whatsapp] Anna: hej", "wa:1", 1.0,
@@ -117,7 +184,7 @@ def test_review_queue_decision_creates_rule(tmp_path):
 
 
 def test_review_mute_decision(tmp_path):
-    c, store = _client_with_store(tmp_path)
+    c, store, _agent = _client_with_store(tmp_path)
     meta = json.dumps({"source": "mail", "sender": "promo@x.com", "person": "",
                        "domain": "x.com", "is_group": False, "suggest": "high"})
     store.add_attention("triage:mail", "medium", "[mail] promo", "m:1", 1.0, status="review", meta=meta)
@@ -129,14 +196,20 @@ def test_review_mute_decision(tmp_path):
 
 
 def test_chat_stream_continues_session(tmp_path):
-    c, store = _client_with_store(tmp_path)
+    agent = HistoryRecordingAgent()
+    c, store, _agent = _client_with_store(tmp_path, agent=agent)
     sid = c.post("/api/chat/stream", json={"message": "first"}).text
     sid = json.loads(next(ln[6:] for ln in sid.splitlines() if ln.startswith("data: ")))["session_id"]
     r2 = c.post("/api/chat/stream", json={"message": "second", "session_id": sid})
     events = [json.loads(ln[6:]) for ln in r2.text.splitlines() if ln.startswith("data: ")]
     reply = next(e for e in events if e["type"] == "reply")
     assert reply["session_id"] == sid  # same session
-    assert reply["history_len"] >= 2 if "history_len" in reply else True
+    # the agent must actually receive the exact prior turn as history, not
+    # just a count: first call gets none, second gets the first exchange back
+    assert agent.history_calls[0] == []
+    assert [(m["role"], m["content"]) for m in agent.history_calls[1]] == [
+        ("user", "first"), ("assistant", "echo:first"),
+    ]
     msgs = c.get(f"/api/sessions/{sid}/messages").json()["messages"]
     assert len(msgs) == 4  # 2 user + 2 assistant
     store.close()
