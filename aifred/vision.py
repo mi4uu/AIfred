@@ -39,8 +39,7 @@ def describe_image(image: bytes | str, prompt: str = DEFAULT_PROMPT,
     """Return a text description/OCR of one image via a VL model. Best-effort:
     returns '' on failure so callers degrade gracefully."""
     base = base_url.rstrip("/")
-    if base.endswith("/v1"):
-        base = base[: -len("/v1")]
+    base = base.removesuffix("/v1")
     own = client is None
     client = client or httpx.Client(timeout=180.0)
     try:

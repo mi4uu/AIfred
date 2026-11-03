@@ -22,8 +22,8 @@ IMPORTANT_KEYWORDS = {
     "can you", "need", "bring", "pick up", "call me",
 }
 _QUESTION_WORDS = ("when", "where", "what", "who", "how", "why", "can", "could", "would", "is", "are", "do")
-_TIME_RE = re.compile(r"\b(\d{1,2}[:.]\d{2}|\d{1,2}\s?(am|pm)|mon|tue|wed|thu|fri|sat|sun)\b", re.I)
-_DATE_RE = re.compile(r"\b(\d{1,2}[./-]\d{1,2}|today|tomorrow|tonight|next week)\b", re.I)
+_TIME_RE = re.compile(r"\b(\d{1,2}[:.]\d{2}|\d{1,2}\s?(am|pm)|mon|tue|wed|thu|fri|sat|sun)\b", re.IGNORECASE)
+_DATE_RE = re.compile(r"\b(\d{1,2}[./-]\d{1,2}|today|tomorrow|tonight|next week)\b", re.IGNORECASE)
 
 DEFAULT_SHORTLIST_MAX = 15
 

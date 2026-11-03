@@ -1,5 +1,7 @@
 """In-engine RAG (V31) — pack/cosine + incremental index + recall, fake embedder."""
 
+from typing import ClassVar
+
 from aifred.rag.embedder import cosine, pack, unpack
 from aifred.rag.index import RagIndex
 from aifred.store.db import Store
@@ -7,14 +9,14 @@ from aifred.store.db import Store
 
 def test_pack_roundtrip_and_cosine():
     v = [0.1, 0.2, 0.3, 0.4]
-    assert list(round(x, 4) for x in unpack(pack(v))) == v
+    assert [round(x, 4) for x in unpack(pack(v))] == v
     assert round(cosine(v, v), 5) == 1.0
     assert cosine([1, 0], [0, 1]) == 0.0
 
 
 class FakeEmbedder:
     """Deterministic toy embedding: bag-of-keywords over a fixed vocab."""
-    VOCAB = ["mleko", "paczka", "dentysta", "zosia", "praca", "spotkanie"]
+    VOCAB: ClassVar = ["mleko", "paczka", "dentysta", "zosia", "praca", "spotkanie"]
 
     def embed(self, texts):
         return [self._vec(t) for t in texts]

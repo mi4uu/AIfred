@@ -4,6 +4,7 @@ Covers parse, budget-before-send (C7), cloud fallback opt-in gating (V1/C6).
 """
 
 import httpx
+import pytest
 
 from aifred.config import Settings
 from aifred.llm.client import LLMClient
@@ -52,11 +53,8 @@ def test_no_fallback_when_disabled():
 
     s = Settings(_env_file=None, AIFRED_CLOUD_FALLBACK_ENABLED=False)
     c = LLMClient(s, client=httpx.Client(transport=httpx.MockTransport(handler)))
-    try:
+    with pytest.raises(httpx.HTTPError):
         c.chat([{"role": "user", "content": "ping"}])
-        assert False, "should have raised"
-    except httpx.HTTPError:
-        pass
 
 
 def test_fallback_when_enabled():

@@ -1,8 +1,13 @@
 """WhatsApp query tool tests — agent reads ingested messages, not brain.md."""
 
-from aifred.skills.whatsapp_query import build_whatsapp_tools, whatsapp_chats, whatsapp_recent
+from typing import ClassVar
+
+from aifred.skills.whatsapp_query import (
+    build_whatsapp_tools,
+    whatsapp_chats,
+    whatsapp_recent,
+)
 from aifred.store.db import Store
-from aifred.whatsapp.ingest import WAMessage
 from aifred.whatsapp.worker import ingest_history
 
 
@@ -70,11 +75,11 @@ class _WebInfo:
 
 
 class _Conv:
-    messages = [type("HMsg", (), {"message": _WebInfo})()]
+    messages: ClassVar = [type("HMsg", (), {"message": _WebInfo})()]
 
 
 class _Data:
-    conversations = [_Conv()]
+    conversations: ClassVar = [_Conv()]
 
 
 class _HistEv:

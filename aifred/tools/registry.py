@@ -6,7 +6,8 @@ sees all tools at once — keeps schema payload small (C7).
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from aifred.tools.base import Tool, ToolError
 

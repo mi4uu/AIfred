@@ -9,8 +9,9 @@ by a pydantic model before the handler runs — bad model output fails loud (V9)
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, ValidationError
 

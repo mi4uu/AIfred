@@ -8,8 +8,8 @@ hook (V7) injected by the caller (T15).
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from aifred.agent.router import IntentRouter
 from aifred.llm.client import LLMClient
@@ -91,7 +91,7 @@ class AgentLoop:
             return tool.run(args)
         except ToolError as e:
             return f"ERROR {e}"  # V9 fail loud, loop continues
-        except Exception as e:  # noqa: BLE001 — any tool failure feeds back to the model, never crashes the turn (V35)
+        except Exception as e:
             return f"ERROR {type(e).__name__}: {str(e)[:200]}"
 
 

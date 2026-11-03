@@ -148,12 +148,12 @@ def _try_google_tools(creds, registry: ToolRegistry, llm, store, status: dict):
         drive = None
         try:  # drive.readonly is a newer scope — degrade if not yet granted (re-auth)
             drive = build("drive", "v3", credentials=creds, cache_discovery=False)
-        except Exception:  # noqa: BLE001
+        except Exception:
             drive = None
         status["google"] = "ok"
         people = build("people", "v1", credentials=creds, cache_discovery=False)
         return people, gmail, cal, drive
-    except Exception as e:  # noqa: BLE001 — never fatal at startup
+    except Exception as e:
         status["google"] = f"build failed: {e}"
         return None, None, None, None
 
@@ -178,7 +178,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             for t in build_task_tools(store, brain):
                 registry.register(t)
             status["brain"] = "ok"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             status["brain"] = f"error: {e}"
     else:
         status["brain"] = "not configured"
@@ -202,7 +202,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
             gc = contacts.load_google(people_service) if people_service is not None else 0
             linked = contacts.link_google() if gc else 0
             status["contacts"] = f"{len(contacts.people)} people, {gc} google contacts, {linked} linked"
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             status["contacts"] = f"error: {e}"
 
     # whatsapp read tools + people lookup — agent accesses messages and resolves identities
@@ -256,7 +256,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
         def _recall(query: str, k: int) -> dict:
             try:
                 return {"hits": rag.recall(query, k)}
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 return {"hits": [], "error": str(e)[:120]}
 
         registry.register(tool_from_model(
@@ -329,9 +329,9 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
         status["telegram"] = "no token"
 
     # whatsapp manager (pairing via web UI). Always available so UI can enable it.
-    from aifred.whatsapp.pairing import WhatsAppManager
-
     import re as _re
+
+    from aifred.whatsapp.pairing import WhatsAppManager
 
     wa = WhatsAppManager(
         store=store,

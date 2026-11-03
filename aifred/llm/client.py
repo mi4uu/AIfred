@@ -29,7 +29,7 @@ class ChatResult:
 
 def _native_base(url: str) -> str:
     u = url.rstrip("/")
-    return u[: -len("/v1")] if u.endswith("/v1") else u
+    return u.removesuffix("/v1")
 
 
 class LLMClient:

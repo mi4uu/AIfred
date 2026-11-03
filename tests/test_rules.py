@@ -70,8 +70,8 @@ class FakeAgent:
 
 
 def test_owner_command_dispatch(monkeypatch):
-    from aifred.whatsapp.pairing import WhatsAppManager
     from aifred.whatsapp.ingest import WAMessage
+    from aifred.whatsapp.pairing import WhatsAppManager
 
     s = Store(":memory:")
     agent = FakeAgent()
@@ -95,8 +95,8 @@ def test_owner_command_dispatch(monkeypatch):
 
 
 def test_non_owner_ignored():
-    from aifred.whatsapp.pairing import WhatsAppManager
     from aifred.whatsapp.ingest import WAMessage
+    from aifred.whatsapp.pairing import WhatsAppManager
 
     s = Store(":memory:")
     agent = FakeAgent()

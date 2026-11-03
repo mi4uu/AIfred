@@ -48,7 +48,7 @@ def test_store_thread_safe_ingest(tmp_path):
         try:
             for i in range(20):
                 s.add_message("whatsapp", "fam", f"{n}-{i}", ts=float(i), body="x")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             errors.append(e)
 
     threads = [threading.Thread(target=writer, args=(n,)) for n in range(4)]

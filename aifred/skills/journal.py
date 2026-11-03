@@ -11,7 +11,7 @@ journal. Recall reads via context_for_query (V12), never the whole vault.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
@@ -23,11 +23,11 @@ INTERNAL_FOLDER = "hermes"
 
 
 def _today() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def _now_hm() -> str:
-    return datetime.now(timezone.utc).strftime("%H:%M")
+    return datetime.now(UTC).strftime("%H:%M")
 
 
 def journal_path(day: str) -> str:

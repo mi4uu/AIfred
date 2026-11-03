@@ -26,7 +26,7 @@ def unpack(blob: bytes) -> array:
 
 def cosine(a, b) -> float:
     s = na = nb = 0.0
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=True):
         s += x * y
         na += x * x
         nb += y * y
@@ -40,8 +40,7 @@ class Embedder:
                  keep_alive: str = "30m", client: httpx.Client | None = None):
         self.base = base_url.rstrip("/")
         # tolerate an OpenAI-style base ("…/v1") — embed lives on the native root
-        if self.base.endswith("/v1"):
-            self.base = self.base[: -len("/v1")]
+        self.base = self.base.removesuffix("/v1")
         self.model = model
         self.keep_alive = keep_alive
         self._client = client or httpx.Client(timeout=180.0)  # first call cold-loads the embed model

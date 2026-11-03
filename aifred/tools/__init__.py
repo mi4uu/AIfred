@@ -3,4 +3,4 @@
 from aifred.tools.base import Tool, ToolError, tool_from_model
 from aifred.tools.registry import ToolRegistry
 
-__all__ = ["Tool", "ToolError", "tool_from_model", "ToolRegistry"]
+__all__ = ["Tool", "ToolError", "ToolRegistry", "tool_from_model"]

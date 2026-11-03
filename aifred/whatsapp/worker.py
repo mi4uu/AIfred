@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from aifred.store.db import Store
 from aifred.whatsapp.ingest import SingleInstanceLock, WAMessage, ingest_batch
@@ -146,11 +146,11 @@ def run_whatsapp_worker(
     client = NewClient(session_path)
 
     @client.event(ConnectedEv)
-    def _on_connect(_c, _e):  # noqa: ANN001
+    def _on_connect(_c, _e):
         log.info("whatsapp connected")
 
     @client.event(MessageEv)
-    def _on_message(_c, message):  # noqa: ANN001
+    def _on_message(_c, message):
         wam = normalize_neonize(message)
         if wam is None:
             return

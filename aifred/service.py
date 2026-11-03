@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import uvicorn
 
@@ -41,7 +41,7 @@ def notify(rt: Runtime, text: str) -> bool:
     try:
         rt.bot.send_message(int(chan), text)
         return True
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("notify failed: %s", e)
         return False
 
@@ -70,7 +70,7 @@ def _triage_loop(rt: Runtime) -> None:  # pragma: no cover (long-running)
                 notify(rt, f"❓ {result['review']} do decyzji w panelu „Do decyzji”.")
             if result.get("notes"):
                 notify(rt, f"📝 Zapisałem {result['notes']} notatkę/i z WhatsApp (do siebie) w brain.md.")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("triage run failed: %s", e)
         # re-sync with brain.md — owner or another agent may have edited it (V32)
         _resync_brain(rt)
@@ -79,12 +79,12 @@ def _triage_loop(rt: Runtime) -> None:  # pragma: no cover (long-running)
         _daily_note_maybe(rt)
         try:  # re-judge frozen attention items: guards + identity upgrades (V37)
             rt.triage.rejudge_open()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("rejudge_open failed: %s", e)
         if rt.rag:  # keep semantic memory current (V31); prunes brain edits (V32)
             try:
                 rt.rag.refresh()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.warning("rag refresh failed: %s", e)
 
 
@@ -101,7 +101,7 @@ def _resync_brain(rt: Runtime) -> None:
         after = len(rt.contacts.people)
         if after != before:
             log.info("brain re-sync: contacts %s -> %s people", before, after)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("brain re-sync failed: %s", e)
 
 
@@ -111,7 +111,7 @@ def _contacts_writeback(rt: Runtime) -> None:
         return
     try:
         changes = rt.contacts.auto_writeback()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("contacts writeback failed: %s", e)
         return
     for ch in changes:
@@ -124,7 +124,7 @@ def _daily_note_maybe(rt: Runtime) -> None:
     s = rt.settings
     if not (s.daily_note_enabled and rt.brain and rt.contacts):
         return
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if now.hour < s.daily_note_hour:
         return
     yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -138,7 +138,7 @@ def _daily_note_maybe(rt: Runtime) -> None:
         if res.get("written"):
             log.info("daily note written for %s", yesterday)
             notify(rt, f"📓 Notatka z {yesterday} gotowa.")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning("daily note failed: %s", e)
 
 
@@ -157,7 +157,7 @@ def _make_self_note_proposer(rt: Runtime):
     def proposer(text: str, batch_ref: str) -> int:
         from aifred.skills.proposals import brain_web_link, propose_events
 
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
         # if the note links a Google Doc/Sheet, pull its real content so events
         # come from the actual schedule, not just the chat line (V29)
         if rt.drive is not None:
@@ -167,7 +167,7 @@ def _make_self_note_proposer(rt: Runtime):
                 for doc in fetch_all(rt.drive, text):
                     text += f"\n\n[Arkusz/dokument „{doc['title']}”]:\n{doc['text']}"
                     log.info("gdoc fetched for proposals: %s", doc["title"])
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.warning("gdoc fetch failed: %s", e)
         link = brain_web_link(s.brainmd_web_url, s.brainmd_mcp_url, "Journal/inbox.md")
         source = f"WA→ja {today} (brain.md Journal/inbox.md)"

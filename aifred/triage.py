@@ -14,7 +14,8 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import UTC
 
 from aifred.store.db import Store
 from aifred.whatsapp.worker import derive_is_group
@@ -153,7 +154,7 @@ class TriageEngine:
             newest = max(newest, r["id"])
             sender = r["sender"]
             chat_id = r["chat_id"]
-            own = (("from_me" in r.keys() and r["from_me"]) or
+            own = (("from_me" in r and r["from_me"]) or
                    (self.owner_lid and re.sub(r"\D", "", sender or "") == self.owner_lid))
             self_chat = self._is_self_chat(chat_id)
             # own message in someone ELSE's chat = your side of a convo -> skip (V22).
@@ -273,9 +274,7 @@ class TriageEngine:
         text = f"{it.subject} {it.snippet}"
         if _AUTOMATED.search(text):
             return True
-        if self.owner_email and it.sender.lower() == self.owner_email:
-            return True  # mail from your own address = automated report, not a real person
-        return False
+        return bool(self.owner_email and it.sender.lower() == self.owner_email)  # own address = automated report
 
     def _guard(self, it: TriageItem) -> None:
         """Fix the classes the small model reliably mis-rates (audited from real data):
@@ -389,19 +388,19 @@ class TriageEngine:
                 continue  # already captured
             captured.append(it)
             if self.brain is not None and (it.snippet or "").strip():
-                from datetime import datetime, timezone
+                from datetime import datetime
 
-                stamp = datetime.fromtimestamp(_norm_self_ts(it.ts), timezone.utc).strftime("%Y-%m-%d %H:%M")
+                stamp = datetime.fromtimestamp(_norm_self_ts(it.ts), UTC).strftime("%Y-%m-%d %H:%M")
                 try:
                     self.brain.append(f"- {stamp} (WA→ja) {it.snippet.strip()}", path="Journal/inbox.md")
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     log.warning("self-note brain append failed: %s", e)
         if captured and self.on_self_notes:
             text = "\n".join((it.snippet or "").strip() for it in captured if (it.snippet or "").strip())
             batch_ref = f"selfnote-batch:{max(it.ext_id for it in captured)}"
             try:
                 self.on_self_notes(text, batch_ref)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.warning("self-note proposer failed: %s", e)
         return len(captured)
 

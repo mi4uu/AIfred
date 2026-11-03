@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import re
+from datetime import UTC
 
 log = logging.getLogger("aifred.proposals")
 
@@ -115,7 +116,8 @@ def propose_events(store, llm, text: str, today: str, source: str, context_link:
     made = []
     for ev in events:
         payload = event_to_payload(ev, source, context_link)
-        ref = f"{batch_ref}:{hashlib.sha1(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:10]}"
+        digest = hashlib.sha1(json.dumps(payload, sort_keys=True).encode(), usedforsecurity=False).hexdigest()
+        ref = f"{batch_ref}:{digest[:10]}"
         line = _summary_line(ev)
         pid = store.add_proposal("calendar", json.dumps(payload), line, ref, today_ts(today))
         if pid:
@@ -126,10 +128,10 @@ def propose_events(store, llm, text: str, today: str, source: str, context_link:
 
 
 def today_ts(today: str) -> float:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     try:
-        return datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
+        return datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=UTC).timestamp()
     except ValueError:
         return 0.0
 
@@ -154,7 +156,7 @@ class CalendarProposalResolver:
         try:
             payload = json.loads(row["payload"])
             res = calendar_create(self.calendar, **payload)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.store.set_proposal_status(pid, "error")
             log.warning("proposal %s failed: %s", pid, e)
             return f"Błąd przy tworzeniu: {e}"

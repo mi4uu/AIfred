@@ -15,16 +15,16 @@ import io
 import logging
 import re
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
-
-# owner trigger: "Alfredzie/AIfred/aifredzie ..." (alfred/aifred + Polish endings)
-OWNER_TRIGGER = re.compile(r"\ba[il]fred\w*\b", re.I)
 
 from aifred.store.db import Store
 from aifred.whatsapp.ingest import SingleInstanceLock, WhatsAppLockError, ingest_batch
 from aifred.whatsapp.worker import ingest_history, normalize_neonize
+
+# owner trigger: "Alfredzie/AIfred/aifredzie ..." (alfred/aifred + Polish endings)
+OWNER_TRIGGER = re.compile(r"\ba[il]fred\w*\b", re.IGNORECASE)
 
 log = logging.getLogger("aifred.whatsapp")
 
@@ -70,7 +70,7 @@ class WhatsAppManager:
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_bytes(data)
             log.info("saved image %s (%d bytes)", ext_id, len(data))
-        except Exception as e:  # noqa: BLE001 — media download best-effort
+        except Exception as e:
             log.warning("image download failed: %s", e)
 
     def _resolve_lid(self, client, message) -> None:  # pragma: no cover (live)
@@ -90,7 +90,7 @@ class WhatsAppManager:
             if phone:
                 self.store.set_lid_phone(lid, phone)
                 log.info("lid->phone resolved: %s -> %s", lid, phone)
-        except Exception:  # noqa: BLE001 — resolution is best-effort
+        except Exception:  # noqa: S110 — resolution is best-effort
             pass
 
     def _backfill_lid_phones(self, client) -> None:  # pragma: no cover (live)
@@ -108,12 +108,12 @@ class WhatsAppManager:
                     phone = re.sub(r"\D", "", getattr(pj, "User", ""))
                     if phone:
                         self.store.set_lid_phone(lid, phone)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S112 — one lid failing to resolve shouldn't stop the backfill
                     continue
             n = len(self.store.lid_phone_map())
             if n:
                 log.info("lid->phone backfill: %d mapped", n)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("lid backfill failed: %s", e)
 
     def _maybe_owner_command(self, client, message, wam) -> None:  # pragma: no cover (live)
@@ -130,14 +130,14 @@ class WhatsAppManager:
         try:
             res = self.agent.run(cmd)
             reply = res.get("reply", "") if isinstance(res, dict) else str(res)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             reply = f"błąd: {e}"
         try:
             chat = getattr(getattr(message, "Info", None), "MessageSource", None)
             chat_jid = getattr(chat, "Chat", None)
             if chat_jid is not None and reply:
                 client.send_message(chat_jid, reply)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("whatsapp reply failed: %s", e)
 
     def status(self) -> dict:
@@ -175,10 +175,12 @@ class WhatsAppManager:
         try:
             # show up as "AIfred" in WhatsApp > Linked devices (cosmetic; needs re-pair)
             try:
-                from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import DeviceProps
+                from neonize.proto.waCompanionReg.WAWebProtobufsCompanionReg_pb2 import (
+                    DeviceProps,
+                )
 
                 client = NewClient(self.session_path, props=DeviceProps(os="AIfred", platformType=DeviceProps.CHROME))
-            except Exception:  # noqa: BLE001 — fall back to default props
+            except Exception:
                 client = NewClient(self.session_path)
 
             def _on_qr(_c, qr_bytes):
@@ -191,14 +193,14 @@ class WhatsAppManager:
             client.event.qr(_on_qr)
 
             @client.event(ConnectedEv)
-            def _on_connect(_c, _e):  # noqa: ANN001
+            def _on_connect(_c, _e):
                 self.state = "connected"
                 self.qr_data_url = None
                 log.info("whatsapp connected")
                 self._backfill_lid_phones(_c)  # V34: resolve existing lids -> phones
 
             @client.event(MessageEv)
-            def _on_message(_c, message):  # noqa: ANN001
+            def _on_message(_c, message):
                 wam = normalize_neonize(message)
                 if wam is None:
                     return
@@ -211,19 +213,19 @@ class WhatsAppManager:
                 self._maybe_owner_command(_c, message, wam)
 
             @client.event(HistorySyncEv)
-            def _on_history(_c, ev):  # noqa: ANN001 — backfill on pair/initial sync
+            def _on_history(_c, ev):
                 try:
                     n = ingest_history(self.store, ev)
                     if n:
                         log.info("whatsapp history backfill: %d messages", n)
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     log.warning("history sync ingest failed: %s", e)
 
             client.connect()  # blocks until disconnect / QR timeout
             if self.state != "connected":
                 self.state = "idle"  # QR expired unscanned -> let user re-enable
                 self.qr_data_url = None
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.state = "error"
             self.error = str(e)
             log.error("whatsapp pairing failed: %s", e)

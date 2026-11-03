@@ -12,13 +12,16 @@ agent can read the structure on demand; ensure_template() writes it once.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
 from aifred.mcp.brainmd import BrainMD
 from aifred.skills.journal import journal_path
 from aifred.tools.base import Tool, tool_from_model
+
+log = logging.getLogger(__name__)
 
 TEMPLATE_PATH = "Journal/_szablon-dzienny.md"
 
@@ -60,7 +63,7 @@ def _norm_ts(ts: float) -> float:
 
 
 def _day_bounds(day: str) -> tuple[float, float]:
-    d = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    d = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=UTC)
     lo = d.timestamp()
     return lo, lo + 86400.0
 
@@ -71,7 +74,7 @@ def gather_day(store, contacts, day: str, limit: int = 800) -> dict:
     lo, hi = _day_bounds(day)
     convo: dict[str, list[str]] = {}
     for r in store.recent_messages("whatsapp", limit=limit):
-        if "from_me" in r.keys() and r["from_me"]:
+        if "from_me" in r and r["from_me"]:  # noqa: RUF019 — r is a sqlite3.Row, no .get()
             continue
         ts = _norm_ts(r["ts"])
         if not (lo <= ts < hi):
@@ -147,14 +150,14 @@ def ensure_template(brain: BrainMD) -> None:
     )
     try:
         brain.write(TEMPLATE_PATH, content)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:
+        log.debug("failed to write daily-note template: %s", e)
 
 
 def _yesterday() -> str:
     from datetime import timedelta
 
-    return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    return (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 class DailyNoteArgs(BaseModel):

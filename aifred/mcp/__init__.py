@@ -3,4 +3,4 @@
 from aifred.mcp.brainmd import BrainMD, chunk_text, rank_chunks
 from aifred.mcp.client import McpClient, McpError
 
-__all__ = ["McpClient", "McpError", "BrainMD", "chunk_text", "rank_chunks"]
+__all__ = ["BrainMD", "McpClient", "McpError", "chunk_text", "rank_chunks"]

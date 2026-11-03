@@ -71,7 +71,8 @@ def test_callback_query_routes_to_resolver_and_gated():
     assert any(m["chat_id"] == 7 for m in sent)
 
     # disallowed user tapping a button is ignored (security gate)
-    sent.clear(); answered.clear()
+    sent.clear()
+    answered.clear()
     cb2 = {"callback_query": {"id": "c2", "from": {"id": 999}, "data": "cal_ok:5",
                               "message": {"chat": {"id": 7}}}}
     assert bot.handle_update(cb2) is None

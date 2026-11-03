@@ -36,9 +36,7 @@ def _should_scan(p: Path) -> bool:
         return False
     if any(p.name.endswith(s) for s in SECRET_FILE_SUFFIXES):
         return False
-    if p.suffix in SKIP_SUFFIXES:
-        return False
-    return True
+    return p.suffix not in SKIP_SUFFIXES
 
 
 def scan_dir(root: str | Path) -> list[tuple[str, str, int]]:

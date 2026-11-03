@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from aifred.mcp.client import McpClient, McpError
+from aifred.mcp.client import McpClient
 
 DEFAULT_TOP_K = 5
 DEFAULT_BUDGET_TOKENS = 1500
@@ -145,6 +145,6 @@ class BrainMD:
             self.client.call_tool("find_similar_tasks", {"query": query, "k": k, "filter": filter, **_scope_arg(scope)})
         )
 
-    def connect(self) -> "BrainMD":
+    def connect(self) -> BrainMD:
         self.client.initialize()
         return self

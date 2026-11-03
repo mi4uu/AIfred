@@ -1,6 +1,13 @@
 """Daily-note composer — gathers the day's signals, fills the fixed template."""
 
-from aifred.skills.daily_note import _norm_ts, _weekday_pl, compose_daily_note, gather_day
+from datetime import UTC
+
+from aifred.skills.daily_note import (
+    _norm_ts,
+    _weekday_pl,
+    compose_daily_note,
+    gather_day,
+)
 from aifred.store.db import Store
 
 
@@ -38,9 +45,9 @@ DAY = "2026-06-03"
 
 
 def _seed(s):
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    day_ms = datetime.strptime(DAY, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp() * 1000  # WA stores ms
+    day_ms = datetime.strptime(DAY, "%Y-%m-%d").replace(tzinfo=UTC).timestamp() * 1000  # WA stores ms
     s.add_message("whatsapp", "31061", "w1", ts=day_ms + 3600_000, body="kup mleko", sender="31061", sender_name="Katarzyna")
     s.add_message("whatsapp", "31061", "w2", ts=day_ms + 3700_000, body="cześć", sender="100000000000001",
                   sender_name="Sówka", from_me=True)  # owner's own -> excluded

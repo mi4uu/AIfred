@@ -1,4 +1,4 @@
-"""Eval grid runner — model × sampling × cases, report hallucination + accuracy.
+"""Eval grid runner — model x sampling x cases, report hallucination + accuracy.
 
     uv run python -m aifred.eval.run                     # default models+samplings
     uv run python -m aifred.eval.run qwen3.6:27b gpt-oss:latest
@@ -10,6 +10,7 @@ on the context-grown grounding subset, which is what degrades with big context).
 
 from __future__ import annotations
 
+import contextlib
 import sys
 import time
 
@@ -27,10 +28,8 @@ def run_combo(model: str, sampling, cases: list[dict], client: httpx.Client) -> 
     grow_n = grow_halluc = 0
     tier_acc: dict[str, list[int]] = {}  # grounding accuracy by context tier
     # warm the model first so timings exclude the cold load-into-memory cost
-    try:
+    with contextlib.suppress(httpx.HTTPError):
         call(model, "ok", "ok", sampling, client=client)
-    except httpx.HTTPError:
-        pass
     lat: list[float] = []  # per-case warm latency (seconds)
     t0 = time.monotonic()
     detail = []

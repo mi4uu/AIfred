@@ -6,7 +6,6 @@ Covers JSON-RPC flow, SSE parse, session header, and V12 chunked retrieval.
 import json
 
 import httpx
-import pytest
 
 from aifred.mcp.brainmd import BrainMD, chunk_text, rank_chunks
 from aifred.mcp.client import McpClient

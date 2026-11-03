@@ -14,9 +14,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS messages (
@@ -383,7 +384,8 @@ class Store:
     def list_attention(self, status: str = "open") -> list[sqlite3.Row]:
         order = "CASE kind WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END, created_ts DESC"
         return self._query(
-            f"SELECT * FROM items WHERE source LIKE 'triage%' AND status=? ORDER BY {order}", (status,)
+            f"SELECT * FROM items WHERE source LIKE 'triage%' AND status=? ORDER BY {order}",  # noqa: S608 — order is the hardcoded literal above, not user input
+            (status,),
         )
 
     def get_item(self, item_id: int) -> sqlite3.Row | None:

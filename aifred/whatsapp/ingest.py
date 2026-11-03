@@ -14,7 +14,7 @@ from __future__ import annotations
 import fcntl
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, Self
 
 from aifred.store.db import Store
 
@@ -32,13 +32,13 @@ class SingleInstanceLock:
         self._fh = None
 
     def acquire(self) -> None:
-        self._fh = open(self.path, "w")
+        fh = open(self.path, "w")  # noqa: SIM115 — held across acquire()/release(), not a `with` block
         try:
-            fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as e:
-            self._fh.close()
-            self._fh = None
+            fh.close()
             raise WhatsAppLockError(f"whatsapp already connected (lock {self.path}) (V5)") from e
+        self._fh = fh
 
     def release(self) -> None:
         if self._fh:
@@ -46,7 +46,7 @@ class SingleInstanceLock:
             self._fh.close()
             self._fh = None
 
-    def __enter__(self) -> "SingleInstanceLock":
+    def __enter__(self) -> Self:
         self.acquire()
         return self
 

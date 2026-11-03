@@ -52,7 +52,7 @@ def read_file(drive, kind: str, file_id: str, max_chars: int = MAX_CHARS) -> dic
     """Fetch one file's text via Drive export. Returns {ok, title, kind, text}."""
     try:
         meta = drive.files().get(fileId=file_id, fields="name,mimeType").execute()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return {"ok": False, "file_id": file_id, "error": str(e)[:160]}
     name = meta.get("name", file_id)
     mime = meta.get("mimeType", "")
@@ -62,7 +62,7 @@ def read_file(drive, kind: str, file_id: str, max_chars: int = MAX_CHARS) -> dic
         else:  # plain uploaded file
             req = drive.files().get_media(fileId=file_id)
         text = _download(req).decode("utf-8", "replace")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return {"ok": False, "file_id": file_id, "title": name, "error": str(e)[:160]}
     truncated = len(text) > max_chars
     return {"ok": True, "file_id": file_id, "title": name, "kind": kind,

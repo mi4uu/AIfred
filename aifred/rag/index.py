@@ -57,9 +57,9 @@ class RagIndex:
         if self.brain is not None:
             try:
                 inbox = self.brain.read("Journal/inbox.md")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 inbox = ""
-            for i, line in enumerate(inbox.splitlines()):
+            for line in inbox.splitlines():
                 ln = line.lstrip("-* ").strip()
                 if len(ln) >= MIN_LEN and "WA→ja" in line:
                     body = ln.split("(WA→ja)", 1)[-1].strip()
@@ -91,10 +91,10 @@ class RagIndex:
             chunk = todo[i:i + BATCH]
             try:
                 vecs = self.emb.embed([c[2] for c in chunk])
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.warning("embed batch failed: %s", e)
                 break
-            for (ref, source, text, ts), vec in zip(chunk, vecs):
+            for (ref, source, text, ts), vec in zip(chunk, vecs, strict=True):
                 if vec:
                     self.store.add_embedding(ref, source, text, pack(vec), ts)
                     n += 1

@@ -128,7 +128,7 @@ def make_api(
                     "session_id": sid,
                     "pending": [p.__dict__ for p in confirm.list_pending()],
                 })
-            except Exception as e:  # noqa: BLE001 — surface to client (V9)
+            except Exception as e:
                 q.put({"type": "error", "error": str(e)})
             finally:
                 q.put(None)
@@ -170,7 +170,7 @@ def make_api(
         try:
             p = confirm.approve(body.token)
         except KeyError:
-            raise HTTPException(status_code=404, detail="unknown token")
+            raise HTTPException(status_code=404, detail="unknown token") from None
         if body.approve:
             confirm.pre_authorize(p.tool)  # allow retried call (V7)
             return {"status": "approved", "tool": p.tool}

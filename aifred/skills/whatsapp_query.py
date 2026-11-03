@@ -34,7 +34,7 @@ def whatsapp_recent(store: Store, limit: int = 30, query: str | None = None, sen
     if sender and contacts is not None:
         jids = contacts.jids_for(sender)
         slow = sender.lower()
-        msgs = [m for m, r in zip(msgs, rows) if r["sender"] in jids or slow in (m["from"] or "").lower()]
+        msgs = [m for m, r in zip(msgs, rows, strict=True) if r["sender"] in jids or slow in (m["from"] or "").lower()]
     elif sender:
         slow = sender.lower()
         msgs = [m for m in msgs if slow in (m["from"] or "").lower()]

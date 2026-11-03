@@ -11,18 +11,22 @@ Google People (emails/phones) can enrich this later once OAuth is done.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
+from datetime import UTC
 
 from aifred.mcp.brainmd import BrainMD
 from aifred.store.db import Store
+
+log = logging.getLogger(__name__)
 
 PEOPLE_FOLDER = "ludzie"
 _TOKEN = re.compile(r"[A-Za-zÀ-ÿĄ-ż]{3,}")
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE = re.compile(r"\+?\d[\d\s\-]{7,}\d")
 _JID = re.compile(r"\d{6,}(?:@[\w.]+)?")
-_STOP = {"title", "rola", "dziewczyna", "ownera", "michał", "ownera", "tags", "ludzie", "rodzina"}
+_STOP = {"title", "rola", "dziewczyna", "ownera", "michał", "tags", "ludzie", "rodzina"}
 # how a person addresses the owner (pet name) — note line "Mówi do mnie: kotek, kotku"
 _OWNER_TERMS = re.compile(
     r"(?:mówi do mnie|nazywa mnie|zwraca się do mnie|pseudonim dla mnie|mój pseudonim)\s*[:\-]?\s*(.+)",
@@ -117,7 +121,7 @@ class Contacts:
 
         try:
             listing = json.loads(self.brain.list_notes(PEOPLE_FOLDER))
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
         notes = [n for n in listing.get("notes", []) if n.lower() != f"{PEOPLE_FOLDER}/index.md"]
         people: list[Person] = []
@@ -125,7 +129,8 @@ class Contacts:
             slug = path.split("/")[-1].rsplit(".", 1)[0]
             try:
                 content = self.brain.read(path)
-            except Exception:  # noqa: BLE001
+            except Exception as e:
+                log.debug("skipping unreadable person note %s: %s", path, e)
                 continue
             person = parse_person(slug, content)
             person.path = path
@@ -133,7 +138,7 @@ class Contacts:
         self.people = people
         try:
             self.lid_map = self.store.lid_phone_map()  # V34: refresh lid->phone
-        except Exception:  # noqa: BLE001
+        except Exception:
             self.lid_map = {}
 
     def load_google(self, people_service) -> int:
@@ -281,7 +286,7 @@ class Contacts:
         return emails, phones
 
     # --- autonomous contact write-back (so AIfred maintains ludzie/ itself) ---
-    def _unambiguous_person_for_jid(self, sender: str, pushname: str) -> "Person | None":
+    def _unambiguous_person_for_jid(self, sender: str, pushname: str) -> Person | None:
         """Person a WA sender confidently belongs to, ONLY if unambiguous:
         its PushName alias matches exactly one known person. Avoids wrong writes."""
         ptok = {t.lower() for t in _TOKEN.findall(pushname or "")}
@@ -293,10 +298,9 @@ class Contacts:
         UNAMBIGUOUS PushName→alias match, and only where the note still has no
         number (placeholder 'do ustalenia'). Never overwrites real data; never
         guesses. This is what lets the contact book stay current without me."""
-        import re as _re
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today = today or datetime.now(UTC).strftime("%Y-%m-%d")
         # DIRECT chats only — a group JID is not a person's personal number (V24)
         links = {r["sender"]: r["sender_name"]
                  for r in self.store.known_sender_names("whatsapp", direct_only=True)
@@ -317,7 +321,8 @@ class Contacts:
             number, pushname = found[p.slug]
             try:
                 content = self.brain.read(p.path)
-            except Exception:  # noqa: BLE001
+            except Exception as e:
+                log.debug("skipping unreadable person note %s: %s", p.path, e)
                 continue
             if number in content or self._has_wa_number(content):  # already recorded / has one
                 continue
@@ -326,7 +331,8 @@ class Contacts:
                 continue
             try:
                 self.brain.write(p.path, new)
-            except Exception:  # noqa: BLE001
+            except Exception as e:
+                log.debug("failed to write phone number into %s: %s", p.path, e)
                 continue
             p.phones.add(number)
             changes.append({"person": p.name, "slug": p.slug, "number": number})
@@ -388,12 +394,12 @@ class Contacts:
         p.owner_terms.add(term)
         try:
             content = self.brain.read(p.path)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return {"ok": False, "reason": str(e)}
         new = self._inject_owner_terms(content, sorted(p.owner_terms))
         try:
             self.brain.write(p.path, new)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return {"ok": False, "reason": str(e)}
         return {"ok": True, "person": p.name, "terms": sorted(p.owner_terms)}
 

@@ -13,7 +13,7 @@ class FakeLLM:
 
     def chat(self, messages, tools=None, temperature=0.0):
         user = messages[-1]["content"]
-        lines = [l for l in user.splitlines() if l.strip()]
+        lines = [ln for ln in user.splitlines() if ln.strip()]
         self.batch_sizes.append(len(lines))
         out = []
         for i, line in enumerate(lines):
@@ -75,7 +75,7 @@ def test_classify_batches_and_boosts_known_person():
     items.append(TriageItem("mail", "k", "kasia@x", "Kasia", 99, "raport", ""))  # known -> boosted
     eng.classify(items)
     assert max(llm.batch_sizes) <= 6  # chunked (BATCH)
-    known = [i for i in items if i.person == "Kasia"][0]
+    known = next(i for i in items if i.person == "Kasia")
     assert known.importance == "medium"  # low boosted because known person
 
 

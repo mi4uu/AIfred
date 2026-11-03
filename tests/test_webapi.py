@@ -128,9 +128,9 @@ def test_review_mute_decision(tmp_path):
 def test_chat_stream_continues_session(tmp_path):
     c, store = _client_with_store(tmp_path)
     sid = c.post("/api/chat/stream", json={"message": "first"}).text
-    sid = json.loads([l[6:] for l in sid.splitlines() if l.startswith("data: ")][0])["session_id"]
+    sid = json.loads(next(ln[6:] for ln in sid.splitlines() if ln.startswith("data: ")))["session_id"]
     r2 = c.post("/api/chat/stream", json={"message": "second", "session_id": sid})
-    events = [json.loads(l[6:]) for l in r2.text.splitlines() if l.startswith("data: ")]
+    events = [json.loads(ln[6:]) for ln in r2.text.splitlines() if ln.startswith("data: ")]
     reply = next(e for e in events if e["type"] == "reply")
     assert reply["session_id"] == sid  # same session
     assert reply["history_len"] >= 2 if "history_len" in reply else True
