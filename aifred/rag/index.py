@@ -11,6 +11,7 @@ handful of focused lines. Incremental: each snippet embedded once (dedup by ref)
 
 from __future__ import annotations
 
+import hashlib
 import logging
 
 from aifred.rag.embedder import Embedder, cosine, pack, unpack
@@ -25,6 +26,14 @@ MUTABLE = {"inbox"}  # sources that can be edited in brain.md -> prune stale ref
 
 def _clip(s: str) -> str:
     return " ".join((s or "").split())[:SNIPPET_MAX]
+
+
+def _stable_id(s: str) -> str:
+    """Deterministic digest for a ref suffix. Python's built-in hash() is
+    randomized per process (PYTHONHASHSEED), so the same content gets a
+    different ref on every restart and dedup-by-ref re-embeds it; sha1 gives
+    the same id every time."""
+    return hashlib.sha1(s.encode(), usedforsecurity=False).hexdigest()[:10]
 
 
 class RagIndex:
@@ -63,13 +72,13 @@ class RagIndex:
                 ln = line.lstrip("-* ").strip()
                 if len(ln) >= MIN_LEN and "WA→ja" in line:
                     body = ln.split("(WA→ja)", 1)[-1].strip()
-                    out.append((f"inbox:{hash(ln) & 0xffffffff}", "inbox", _clip(body), 0.0))
+                    out.append((f"inbox:{_stable_id(ln)}", "inbox", _clip(body), 0.0))
         # chat turns (what the owner asked / was told)
         for s in self.store.list_sessions():
             for m in self.store.session_messages(s["id"]):
                 body = (m["content"] or "").strip()
                 if len(body) >= MIN_LEN:
-                    out.append((f"chat:{s['id']}:{m.get('ts', 0)}:{hash(body) & 0xffffff}",
+                    out.append((f"chat:{s['id']}:{m.get('ts', 0)}:{_stable_id(body)}",
                                 "chat", _clip(f"{m['role']}: {body}"), float(m.get("ts", 0) or 0)))
         return out
 

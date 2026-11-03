@@ -1,10 +1,26 @@
 """In-engine RAG (V31), pack/cosine + incremental index + recall, fake embedder."""
 
+import subprocess
+import sys
 from typing import ClassVar
 
 from aifred.rag.embedder import cosine, pack, unpack
-from aifred.rag.index import RagIndex
+from aifred.rag.index import RagIndex, _stable_id
 from aifred.store.db import Store
+
+
+def test_stable_id_is_deterministic_not_hash_seeded():
+    # Content-addressed (sha1), unlike Python's built-in hash() which is
+    # randomized per process via PYTHONHASHSEED. Spawn two fresh interpreters
+    # with different hash seeds and confirm the id doesn't move.
+    import os
+
+    code = "from aifred.rag.index import _stable_id; print(_stable_id('kup mleko i chleb'))"
+    env1 = {**os.environ, "PYTHONHASHSEED": "1"}
+    env2 = {**os.environ, "PYTHONHASHSEED": "2"}
+    out1 = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env1).stdout.strip()  # noqa: S603 -- fixed argv, no untrusted input
+    out2 = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env2).stdout.strip()  # noqa: S603 -- fixed argv, no untrusted input
+    assert out1 == out2 == _stable_id("kup mleko i chleb")
 
 
 def test_pack_roundtrip_and_cosine():
@@ -89,6 +105,21 @@ def test_inbox_edit_prunes_stale_vectors():
     inbox_rows = [r for r in s.all_embeddings() if r["source"] == "inbox"]
     assert len(inbox_rows) == 1                       # stale lines pruned
     assert "PRZENIESIONA" in inbox_rows[0]["text"]    # edited content re-indexed
+    s.close()
+
+
+def test_inbox_refs_survive_a_restart_without_duplicating(tmp_path):
+    """Regression: refs built from hash() changed across process restarts
+    (different PYTHONHASHSEED), so a restart would re-embed identical inbox
+    content as a new row instead of recognising it as already indexed."""
+    s = Store(str(tmp_path / "s.db"))
+    brain = FakeBrain("- 2026-06-04 09:00 (WA→ja) dentysta Zosia 16:40")
+    idx = RagIndex(s, FakeEmbedder(), contacts=FakeContacts(), brain=brain)
+    assert idx.refresh() == 1
+    # simulate a restart: a brand-new RagIndex over the same (persistent) store
+    idx2 = RagIndex(s, FakeEmbedder(), contacts=FakeContacts(), brain=brain)
+    assert idx2.refresh() == 0  # same content, same ref -> nothing new
+    assert len([r for r in s.all_embeddings() if r["source"] == "inbox"]) == 1
     s.close()
 
 
