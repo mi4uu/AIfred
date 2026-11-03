@@ -4,9 +4,11 @@ Layout (matches existing vault):
   Journal/YYYY-MM-DD.md   user-facing daily log (append-only entries, V6)
   hermes/                 internal-detail catalog (reasoning, raw notes)
 
-distill_to_journal implements the hermes pattern: read the internal catalog via
-RAG (scoped, V12), have the LLM draw conclusions, append them to today's
-journal. Recall reads via context_for_query (V12), never the whole vault.
+distill_to_journal implements the hermes pattern (named after Hermes, the
+predecessor project this folder layout was ported from, see SPEC.md C2):
+read the internal catalog via RAG (scoped, V12), have the LLM draw
+conclusions, append them to today's journal. Recall reads via
+context_for_query (V12), never the whole vault.
 """
 
 from __future__ import annotations
