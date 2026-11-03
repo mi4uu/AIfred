@@ -53,6 +53,39 @@ def test_event_to_payload_winter_date_uses_cet_offset():
     assert winter["end"] == "2026-11-03T10:00:00+01:00"
 
 
+def test_event_to_payload_on_spring_dst_transition_day():
+    """Warsaw springs forward at 02:00 on 2026-03-29 (CET -> CEST). A 09:00
+    event that day must get +02:00, not midnight's +01:00 (V35 follow-up)."""
+    ev = event_to_payload(
+        {"summary": "Rano", "date": "2026-03-29", "all_day": False, "start_time": "09:00"},
+        "src", "",
+    )
+    assert ev["start"] == "2026-03-29T09:00:00+02:00"
+    assert ev["end"] == "2026-03-29T10:00:00+02:00"
+
+
+def test_event_to_payload_on_autumn_dst_transition_day():
+    """Warsaw falls back at 03:00 CEST -> 02:00 CET on 2026-10-25. A 09:00
+    event that day must get +01:00, not midnight's +02:00."""
+    ev = event_to_payload(
+        {"summary": "Rano", "date": "2026-10-25", "all_day": False, "start_time": "09:00"},
+        "src", "",
+    )
+    assert ev["start"] == "2026-10-25T09:00:00+01:00"
+    assert ev["end"] == "2026-10-25T10:00:00+01:00"
+
+
+def test_event_to_payload_default_end_rolls_over_midnight():
+    # A 23:30 start with no end_time must get a +1h end on the NEXT date,
+    # not wrap the clock back to 00:30 on the same date (before start).
+    ev = event_to_payload(
+        {"summary": "Late", "date": "2026-06-09", "all_day": False, "start_time": "23:30"},
+        "src", "",
+    )
+    assert ev["start"] == "2026-06-09T23:30:00+02:00"
+    assert ev["end"] == "2026-06-10T00:30:00+02:00"
+
+
 def test_extract_events_filters_bad():
     llm = FakeLLM([
         {"summary": "Dentysta", "date": "2026-06-09", "start_time": "16:40"},

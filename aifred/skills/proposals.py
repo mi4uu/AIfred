@@ -67,17 +67,23 @@ def extract_events(llm, text: str, today: str) -> list[dict]:
 
 
 def _rfc3339(date: str, hm: str) -> str:
-    from aifred.tz import offset_for_date
+    from aifred.tz import offset_for_datetime
 
-    return f"{date}T{hm}:00{offset_for_date(date)}"
+    return f"{date}T{hm}:00{offset_for_datetime(date, hm)}"
 
 
-def _next_hm(hm: str) -> str:
+def _default_end(date: str, start_hm: str) -> tuple[str, str]:
+    """1-hour default duration when the model gave no end_time. Uses real
+    datetime arithmetic so a late start (e.g. 23:30) rolls the date forward
+    instead of wrapping the clock back to a time before the start."""
+    from datetime import datetime, timedelta
+
     try:
-        h, m = (int(x) for x in hm.split(":"))
-        return f"{(h + 1) % 24:02d}:{m:02d}"
+        start_dt = datetime.strptime(f"{date} {start_hm}", "%Y-%m-%d %H:%M")
     except ValueError:
-        return hm
+        return date, start_hm
+    end_dt = start_dt + timedelta(hours=1)
+    return end_dt.strftime("%Y-%m-%d"), end_dt.strftime("%H:%M")
 
 
 def event_to_payload(ev: dict, source: str, context_link: str) -> dict:
@@ -98,8 +104,11 @@ def event_to_payload(ev: dict, source: str, context_link: str) -> dict:
         start, end = date, nxt  # all-day (end exclusive)
     else:
         st = str(ev["start_time"])
-        en = str(ev.get("end_time") or _next_hm(st))
-        start, end = _rfc3339(date, st), _rfc3339(date, en)
+        if ev.get("end_time"):
+            end_date, en = date, str(ev["end_time"])
+        else:
+            end_date, en = _default_end(date, st)
+        start, end = _rfc3339(date, st), _rfc3339(end_date, en)
     return {"summary": str(ev["summary"])[:120], "start": start, "end": end,
             "source": source, "description": desc}
 

@@ -83,18 +83,24 @@ def test_side_effecting_denied_without_confirm():
     assert any("DENIED" in m.get("content", "") for m in out["messages"] if m.get("role") == "tool")
 
 
-def test_now_hint_uses_cet_offset_in_winter(monkeypatch):
+def test_now_hint_states_date_and_zone_but_not_an_offset_to_reuse(monkeypatch):
     winter = datetime(2026, 11, 3, 9, 30, tzinfo=get_timezone("Europe/Warsaw"))
     monkeypatch.setattr("aifred.tz.datetime", type("D", (), {"now": staticmethod(lambda tz: winter)}))
     hint = _now_hint("Europe/Warsaw")
-    assert "2026-11-03" in hint and "+01:00" in hint
+    assert "2026-11-03" in hint
+    assert "Europe/Warsaw" in hint
+    # must not hand the model "today's" offset to stamp on every event: a
+    # calendar event on the other side of a DST change would get the wrong
+    # one (V35 follow-up). Offsets are attached in code, per event date.
+    assert "+01:00" not in hint and "+02:00" not in hint
 
 
-def test_now_hint_uses_cest_offset_in_summer(monkeypatch):
+def test_now_hint_same_shape_across_dst(monkeypatch):
     summer = datetime(2026, 7, 3, 9, 30, tzinfo=get_timezone("Europe/Warsaw"))
     monkeypatch.setattr("aifred.tz.datetime", type("D", (), {"now": staticmethod(lambda tz: summer)}))
     hint = _now_hint("Europe/Warsaw")
-    assert "2026-07-03" in hint and "+02:00" in hint
+    assert "2026-07-03" in hint
+    assert "Europe/Warsaw" in hint
 
 
 def test_side_effecting_allowed_with_confirm():

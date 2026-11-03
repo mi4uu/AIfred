@@ -11,11 +11,13 @@ without network. build_google_tools() binds live services into Tools.
 from __future__ import annotations
 
 import base64
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from aifred.tools.base import Tool, ToolError, tool_from_model
+from aifred.tz import offset_for_datetime
 
 BODY_MAX = 2000  # V11: cap body chars returned to LLM
 
@@ -108,9 +110,29 @@ def calendar_list(service, time_min: str, time_max: str, max_results: int = 20, 
     return out
 
 
+_OFFSET_SUFFIX = re.compile(r"(Z|[+-]\d{2}:\d{2})$")
+_LOCAL_DATETIME = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})")
+
+
+def _ensure_offset(value: str) -> str:
+    """Attach the correct UTC offset to a naive local 'date T time' string
+    (no Z/+HH:MM suffix), resolved for that exact local moment rather than
+    today's offset, so a model-supplied datetime on the other side of a DST
+    change from "now" still lands correct (V35 follow-up)."""
+    if _OFFSET_SUFFIX.search(value):
+        return value  # model already gave an offset, trust it as-is
+    m = _LOCAL_DATETIME.match(value)
+    if not m:
+        return value
+    date, hm = m.groups()
+    return value + offset_for_datetime(date, hm)
+
+
 def _cal_endpoint(value: str) -> dict:
     """All-day (YYYY-MM-DD) -> {'date'}, timed (has 'T') -> {'dateTime'}."""
-    return {"date": value} if len(value) == 10 and "T" not in value else {"dateTime": value}
+    if len(value) == 10 and "T" not in value:
+        return {"date": value}
+    return {"dateTime": _ensure_offset(value)}
 
 
 def calendar_create(
@@ -164,10 +186,13 @@ class CalListArgs(BaseModel):
     max_results: int = Field(default=20, ge=1, le=100)
 
 
+_LOCAL_DT_DESC = "local date+time YYYY-MM-DDTHH:MM, no offset: the correct UTC offset for that date is attached automatically"
+
+
 class CalCreateArgs(BaseModel):
     summary: str
-    start: str = Field(description="RFC3339 start")
-    end: str = Field(description="RFC3339 end")
+    start: str = Field(description=_LOCAL_DT_DESC)
+    end: str = Field(description=_LOCAL_DT_DESC)
     source: str = Field(description="origin of this event (brain.md ref or user msg) — required (V3)")
     description: str = ""
 
@@ -176,8 +201,8 @@ class CalUpdateArgs(BaseModel):
     event_id: str
     source: str = Field(description="why updated — required (V3)")
     summary: str | None = None
-    start: str | None = None
-    end: str | None = None
+    start: str | None = Field(default=None, description="local date+time YYYY-MM-DDTHH:MM, no offset")
+    end: str | None = Field(default=None, description="local date+time YYYY-MM-DDTHH:MM, no offset")
 
 
 def build_google_tools(gmail_service, calendar_service) -> list[Tool]:

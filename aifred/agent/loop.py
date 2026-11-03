@@ -108,14 +108,22 @@ _WEEKDAYS = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota
 def _now_hint(tz_name: str | None = None) -> str:
     """Current date/time in the owner's configured timezone (AIFRED_TIMEZONE,
     default Europe/Warsaw) so the model builds correct calendar dates instead
-    of guessing the year (V35). Offset is resolved per-date via zoneinfo, so
-    it's correct in both CET (winter) and CEST (summer)."""
-    from aifred.tz import now_in_tz, offset_str
+    of guessing the year (V35).
+
+    Deliberately does NOT tell the model "today's" UTC offset for use on
+    calendar events: an event on the other side of a DST change from today
+    would get the wrong one. Instead the model gives a naive local date+time
+    with no offset, and calendar_create/calendar_update attach the correct
+    offset for THAT event's own date in code (aifred.tz, per-date zoneinfo).
+    """
+    from aifred.tz import now_in_tz
 
     now = now_in_tz(tz_name)
+    zone = tz_name or getattr(now.tzinfo, "key", str(now.tzinfo))
     return (f"Aktualna data: {now.strftime('%Y-%m-%d')} ({_WEEKDAYS[now.weekday()]}), "
-            f"godzina {now.strftime('%H:%M')}. Dla wydarzeń w kalendarzu używaj RFC3339 "
-            f"ze strefą {offset_str(now)} i ZAWSZE bieżącego roku ({now.year}) o ile nie podano innego.")
+            f"godzina {now.strftime('%H:%M')}, strefa {zone}. Dla wydarzeń w kalendarzu podawaj "
+            f"datę i czas lokalny BEZ offsetu (np. 2026-06-09T16:40), system sam dołączy "
+            f"poprawny offset dla tej konkretnej daty. ZAWSZE bieżący rok ({now.year}) o ile nie podano innego.")
 
 
 def _parse_args(raw):

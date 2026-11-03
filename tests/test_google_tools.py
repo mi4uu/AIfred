@@ -8,6 +8,7 @@ import pytest
 
 from aifred.google.tools import (
     BODY_MAX,
+    _cal_endpoint,
     build_google_tools,
     calendar_create,
     gmail_get,
@@ -103,6 +104,38 @@ def test_calendar_create_records_source():
     cal = FakeCal()
     calendar_create(cal, "lunch", "s", "e", source="brain.md#plans")
     assert "brain.md#plans" in cal.events().inserted["description"]  # V3 provenance
+
+
+def test_cal_endpoint_attaches_offset_for_naive_local_datetime():
+    # winter: CET +01:00
+    assert _cal_endpoint("2026-11-03T09:00") == {"dateTime": "2026-11-03T09:00+01:00"}
+
+
+def test_cal_endpoint_naive_datetime_on_spring_dst_day_gets_cest():
+    # Warsaw springs forward at 02:00 on 2026-03-29; a 09:00 event that day
+    # must get +02:00, not "today's" offset from whenever the agent runs.
+    assert _cal_endpoint("2026-03-29T09:00") == {"dateTime": "2026-03-29T09:00+02:00"}
+
+
+def test_cal_endpoint_naive_datetime_on_autumn_dst_day_gets_cet():
+    assert _cal_endpoint("2026-10-25T09:00") == {"dateTime": "2026-10-25T09:00+01:00"}
+
+
+def test_cal_endpoint_trusts_an_offset_the_model_already_supplied():
+    assert _cal_endpoint("2026-11-03T09:00+03:00") == {"dateTime": "2026-11-03T09:00+03:00"}
+    assert _cal_endpoint("2026-11-03T09:00:00Z") == {"dateTime": "2026-11-03T09:00:00Z"}
+
+
+def test_cal_endpoint_all_day_unchanged():
+    assert _cal_endpoint("2026-11-03") == {"date": "2026-11-03"}
+
+
+def test_calendar_create_normalises_naive_start_end_per_event_date():
+    cal = FakeCal()
+    calendar_create(cal, "spring event", "2026-03-29T09:00", "2026-03-29T10:00", source="chat")
+    body = cal.events().inserted
+    assert body["start"] == {"dateTime": "2026-03-29T09:00+02:00"}
+    assert body["end"] == {"dateTime": "2026-03-29T10:00+02:00"}
 
 
 def test_build_tools_flags_and_schema():
