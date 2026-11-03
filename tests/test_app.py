@@ -1,5 +1,7 @@
 """Assembler tests, graceful degrade when services absent."""
 
+from fastapi.testclient import TestClient
+
 from aifred.app import build_runtime
 from aifred.config import Settings
 from aifred.main import create_app
@@ -44,9 +46,10 @@ def test_build_runtime_telegram_only(tmp_path):
     rt.store.close()
 
 
-def test_run_service_entrypoint_wires_a_working_chat_route(tmp_path):
+def test_run_service_entrypoint_wires_a_working_chat_route(tmp_path, monkeypatch):
     """`uv run aifred-service` must produce an app whose /api/chat route is
-    live, not the bare create_app() used by `uv run aifred` (no agent). This
+    live, not the bare create_app() used by `uv run aifred` (no agent), and
+    that route must actually answer, not just be present in app.routes. This
     guards against the quickstart command silently giving a UI-only shell."""
     s = Settings(
         _env_file=None,
@@ -58,8 +61,13 @@ def test_run_service_entrypoint_wires_a_working_chat_route(tmp_path):
     )
     rt = build_runtime(s)
     assert rt.agent is not None  # what run_service() passes to create_app()
+    # stub the agent's own run() so this test doesn't need a live LLM; the
+    # wiring under test is create_app()/make_api(), not the agent loop itself
+    monkeypatch.setattr(rt.agent, "run", lambda message, **kw: {"reply": f"echo: {message}"})
     app = create_app(agent=rt.agent, confirm=rt.confirm, whatsapp=rt.whatsapp,
                       store=rt.store, triage=rt.triage, contacts=rt.contacts)
-    chat_routes = [r for r in app.routes if getattr(r, "path", None) == "/api/chat"]
-    assert chat_routes, "/api/chat must be registered when the entrypoint wires an agent"
+    client = TestClient(app)
+    resp = client.post("/api/chat", json={"message": "hello"})
+    assert resp.status_code == 200
+    assert resp.json()["reply"] == "echo: hello"
     rt.store.close()
