@@ -11,10 +11,17 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from typing import Protocol
 
 import httpx
 
+from aifred.agent.loop import AgentLike
+
 API = "https://api.telegram.org"
+
+
+class CallbackResolver(Protocol):
+    def handle_callback(self, data: str) -> str | None: ...
 
 
 def parse_allowed_users(raw: str) -> set[int]:
@@ -31,9 +38,9 @@ def parse_allowed_users(raw: str) -> set[int]:
 class TelegramBot:
     token: str
     allowed_users: set[int]
-    agent: object  # AgentLoop-like with .run(text)->{"reply":...}
+    agent: AgentLike
     client: httpx.Client = field(default_factory=lambda: httpx.Client(timeout=70.0))
-    callback_resolver: object | None = None  # .handle_callback(data:str)->str|None (V27)
+    callback_resolver: CallbackResolver | None = None  # V27
 
     def _url(self, method: str) -> str:
         return f"{API}/bot{self.token}/{method}"

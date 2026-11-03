@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from aifred.agent.loop import AgentLike
 from aifred.store.db import Store
 from aifred.whatsapp.ingest import SingleInstanceLock, WhatsAppLockError, ingest_batch
 from aifred.whatsapp.worker import ingest_history, normalize_neonize
@@ -44,7 +45,7 @@ class WhatsAppManager:
     session_path: str
     lock_path: str
     on_message: Callable | None = None
-    agent: object | None = None       # AgentLoop — for owner commands
+    agent: AgentLike | None = None     # for owner commands
     owner_tail: str = ""              # owner's WA number (last 9 digits) — commands only from owner
     media_dir: str = ""               # where downloaded images land (V36)
     state: str = "idle"  # idle | pairing | connected | error

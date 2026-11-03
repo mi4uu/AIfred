@@ -63,45 +63,46 @@ def make_api(
         if web_token and x_aifred_token != web_token:
             raise HTTPException(status_code=401, detail="bad token")
 
-    def _need_store():
+    def _need_store() -> Any:
         if store is None:
             raise HTTPException(status_code=503, detail="store not configured")
+        return store
 
     # ---- sessions ----
     @router.get("/sessions", dependencies=[Depends(auth)])
     def list_sessions() -> dict:
-        _need_store()
-        return {"sessions": store.list_sessions()}
+        s = _need_store()
+        return {"sessions": s.list_sessions()}
 
     @router.post("/sessions", dependencies=[Depends(auth)])
     def new_session() -> dict:
-        _need_store()
-        sid = store.create_session(ts=time.time())
+        s = _need_store()
+        sid = s.create_session(ts=time.time())
         return {"id": sid, "title": "New chat"}
 
     @router.get("/sessions/{sid}/messages", dependencies=[Depends(auth)])
     def session_messages(sid: int) -> dict:
-        _need_store()
-        if not store.session_exists(sid):
+        s = _need_store()
+        if not s.session_exists(sid):
             raise HTTPException(status_code=404, detail="no such session")
-        return {"messages": store.session_messages(sid)}
+        return {"messages": s.session_messages(sid)}
 
     @router.patch("/sessions/{sid}", dependencies=[Depends(auth)])
     def rename_session(sid: int, body: RenameIn) -> dict:
-        _need_store()
-        store.rename_session(sid, body.title[:80])
+        s = _need_store()
+        s.rename_session(sid, body.title[:80])
         return {"status": "ok"}
 
     @router.delete("/sessions/{sid}", dependencies=[Depends(auth)])
     def delete_session(sid: int) -> dict:
-        _need_store()
-        store.delete_session(sid)
+        s = _need_store()
+        s.delete_session(sid)
         return {"status": "deleted"}
 
     # ---- chat (SSE) ----
     @router.post("/chat/stream", dependencies=[Depends(auth)])
     def chat_stream(body: ChatIn) -> StreamingResponse:
-        _need_store()
+        store = _need_store()
         now = time.time()
         sid = body.session_id
         if not sid or not store.session_exists(sid):
@@ -179,34 +180,34 @@ def make_api(
     # ---- settings (runtime-tunable triage cadence) ----
     @router.get("/settings", dependencies=[Depends(auth)])
     def get_settings_ep() -> dict:
-        _need_store()
+        s = _need_store()
         return {
-            "triage_interval_min": int(store.get_setting("triage_interval_min", "0") or 0),
+            "triage_interval_min": int(s.get_setting("triage_interval_min", "0") or 0),
         }
 
     @router.post("/settings", dependencies=[Depends(auth)])
     def set_settings_ep(body: SettingsIn) -> dict:
-        _need_store()
+        s = _need_store()
         if body.triage_interval_min is not None:
-            store.set_setting("triage_interval_min", str(max(0, body.triage_interval_min)))
+            s.set_setting("triage_interval_min", str(max(0, body.triage_interval_min)))
         if body.triage_enabled is not None and not body.triage_enabled:
-            store.set_setting("triage_interval_min", "0")
-        return {"triage_interval_min": int(store.get_setting("triage_interval_min", "0") or 0)}
+            s.set_setting("triage_interval_min", "0")
+        return {"triage_interval_min": int(s.get_setting("triage_interval_min", "0") or 0)}
 
     # ---- attention feed (triage output) ----
     @router.get("/attention", dependencies=[Depends(auth)])
     def attention() -> dict:
-        _need_store()
+        s = _need_store()
         from aifred.skills.attention import _resolve_identities
 
-        rows = store.list_attention("open")
+        rows = s.list_attention("open")
         return {"items": [{"id": r["id"], "importance": r["kind"],
                            "text": _resolve_identities(r["content"], contacts), "ts": r["created_ts"]} for r in rows]}
 
     @router.post("/attention/{item_id}/done", dependencies=[Depends(auth)])
     def attention_done(item_id: int) -> dict:
-        _need_store()
-        store.set_item_status(item_id, "done")
+        s = _need_store()
+        s.set_item_status(item_id, "done")
         return {"status": "done"}
 
     @router.post("/triage/run", dependencies=[Depends(auth)])
@@ -218,11 +219,11 @@ def make_api(
     # ---- review queue (active learning: uncertain item -> owner decides -> rule) ----
     @router.get("/review", dependencies=[Depends(auth)])
     def review_list() -> dict:
-        _need_store()
+        s = _need_store()
         import json as _j
 
         out = []
-        for r in store.list_attention("review"):
+        for r in s.list_attention("review"):
             try:
                 meta = _j.loads(r["meta"] or "{}")
             except (ValueError, TypeError):
@@ -239,14 +240,14 @@ def make_api(
         """Owner verdict on an uncertain item. Records a scoped rule so the same
         sender/domain is auto-handled next time, then files the item (V21).
         decision: important | not_important | mute."""
-        _need_store()
+        s = _need_store()
         import json as _j
         import time as _t
 
         decision = str(body.get("decision", "")).lower()
         if decision not in ("important", "not_important", "mute"):
             raise HTTPException(status_code=400, detail="bad decision")
-        row = store.get_item(item_id)
+        row = s.get_item(item_id)
         if row is None:
             raise HTTPException(status_code=404, detail="no such item")
         try:
@@ -263,24 +264,24 @@ def make_api(
         action = {"important": "vip", "not_important": "low", "mute": "mute"}[decision]
         rule_id = None
         if pattern:
-            rule_id = store.add_rule(scope, pattern, action, _t.time())
+            rule_id = s.add_rule(scope, pattern, action, _t.time())
         # important -> keep it visible as high; otherwise file it away
         if decision == "important":
-            store.set_item_kind(item_id, "high")  # promote so the feed shows it
-            store.set_item_status(item_id, "open")
+            s.set_item_kind(item_id, "high")  # promote so the feed shows it
+            s.set_item_status(item_id, "open")
         else:
-            store.set_item_status(item_id, "done")
+            s.set_item_status(item_id, "done")
         return {"status": "ok", "rule_id": rule_id, "scope": scope, "pattern": pattern, "action": action}
 
     # ---- triage rules (teaching) ----
     @router.get("/rules", dependencies=[Depends(auth)])
     def rules_list() -> dict:
-        _need_store()
-        return {"rules": store.list_rules()}
+        s = _need_store()
+        return {"rules": s.list_rules()}
 
     @router.post("/rules", dependencies=[Depends(auth)])
     def rules_add(body: dict) -> dict:
-        _need_store()
+        s = _need_store()
         import time as _t
 
         scope = str(body.get("scope", "")).lower()
@@ -290,13 +291,13 @@ def make_api(
             "mute", "vip", "high", "medium", "low"
         ) or not pattern:
             raise HTTPException(status_code=400, detail="bad rule")
-        rid = store.add_rule(scope, pattern, action, _t.time())
+        rid = s.add_rule(scope, pattern, action, _t.time())
         return {"id": rid}
 
     @router.delete("/rules/{rule_id}", dependencies=[Depends(auth)])
     def rules_delete(rule_id: int) -> dict:
-        _need_store()
-        store.delete_rule(rule_id)
+        s = _need_store()
+        s.delete_rule(rule_id)
         return {"status": "deleted"}
 
     # ---- whatsapp ----

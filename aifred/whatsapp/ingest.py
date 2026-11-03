@@ -14,7 +14,7 @@ from __future__ import annotations
 import fcntl
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, Self
+from typing import IO, Any, Protocol, Self
 
 from aifred.store.db import Store
 
@@ -29,7 +29,7 @@ class SingleInstanceLock:
     def __init__(self, lock_path: str | Path):
         self.path = Path(lock_path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._fh = None
+        self._fh: IO[str] | None = None
 
     def acquire(self) -> None:
         fh = open(self.path, "w")  # noqa: SIM115 — held across acquire()/release(), not a `with` block

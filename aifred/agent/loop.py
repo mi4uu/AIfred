@@ -10,11 +10,18 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any, Protocol
 
 from aifred.agent.router import IntentRouter
 from aifred.llm.client import LLMClient
 from aifred.tools.base import ToolError
 from aifred.tools.registry import ToolRegistry
+
+
+class AgentLike(Protocol):
+    """What callers outside the agent package need: run a turn, get a reply."""
+
+    def run(self, user_message: str, history: list[dict] | None = None, on_step: Any = None) -> Any: ...
 
 DEFAULT_SYSTEM = (
     "You are AIfred, a personal assistant. Use tools to act. "

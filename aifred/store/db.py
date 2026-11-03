@@ -240,7 +240,8 @@ class Store:
                 "ON CONFLICT(scope,pattern) DO UPDATE SET action=excluded.action",
                 (scope, pattern.lower().strip(), action, ts),
             )
-            return int(cur.lastrowid)
+            assert cur.lastrowid is not None  # just inserted, always has a rowid
+            return cur.lastrowid
 
     def list_rules(self) -> list[dict]:
         return [dict(r) for r in self._query("SELECT * FROM rules ORDER BY id DESC")]
@@ -258,7 +259,8 @@ class Store:
                 "INSERT INTO proposals(kind,payload,summary,source_ref,created_ts) VALUES(?,?,?,?,?)",
                 (kind, payload, summary, source_ref, ts),
             )
-            return int(cur.lastrowid)
+            assert cur.lastrowid is not None  # just inserted, always has a rowid
+            return cur.lastrowid
 
     def get_proposal(self, pid: int) -> sqlite3.Row | None:
         rows = self._query("SELECT * FROM proposals WHERE id=?", (pid,))
@@ -351,7 +353,8 @@ class Store:
                 "INSERT INTO items(source,kind,content,ref,created_ts,status,meta) VALUES(?,?,?,?,?,?,?)",
                 (source, kind, content, ref, created_ts, status, meta),
             )
-            return int(cur.lastrowid)
+            assert cur.lastrowid is not None  # just inserted, always has a rowid
+            return cur.lastrowid
 
     def list_items(self, status: str = "open") -> list[sqlite3.Row]:
         return self._query("SELECT * FROM items WHERE status=? ORDER BY created_ts", (status,))
@@ -398,7 +401,8 @@ class Store:
             cur = c.execute(
                 "INSERT INTO sessions(title,created_ts,updated_ts) VALUES(?,?,?)", (title, ts, ts)
             )
-            return int(cur.lastrowid)
+            assert cur.lastrowid is not None  # just inserted, always has a rowid
+            return cur.lastrowid
 
     def list_sessions(self) -> list[dict]:
         rows = self._query(
