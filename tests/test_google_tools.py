@@ -11,6 +11,7 @@ from aifred.google.tools import (
     _cal_endpoint,
     build_google_tools,
     calendar_create,
+    calendar_update,
     gmail_get,
     gmail_search,
 )
@@ -51,6 +52,7 @@ class FakeGmail:
 class FakeEvents:
     def __init__(self):
         self.inserted = None
+        self.patched = None
 
     def list(self, **kw):
         return _Exec({"items": [{"id": "e1", "summary": "standup", "start": {"dateTime": "x"}, "end": {"dateTime": "y"}}]})
@@ -58,6 +60,10 @@ class FakeEvents:
     def insert(self, calendarId, body):
         self.inserted = body
         return _Exec({"id": "new1", "summary": body["summary"], "htmlLink": "http://x"})
+
+    def patch(self, calendarId, eventId, body):
+        self.patched = body
+        return _Exec({"id": eventId, "summary": body.get("summary")})
 
 
 class FakeCal:
@@ -108,17 +114,27 @@ def test_calendar_create_records_source():
 
 def test_cal_endpoint_attaches_offset_for_naive_local_datetime():
     # winter: CET +01:00
-    assert _cal_endpoint("2026-11-03T09:00") == {"dateTime": "2026-11-03T09:00+01:00"}
+    assert _cal_endpoint("2026-11-03T09:00") == {"dateTime": "2026-11-03T09:00:00+01:00"}
 
 
 def test_cal_endpoint_naive_datetime_on_spring_dst_day_gets_cest():
     # Warsaw springs forward at 02:00 on 2026-03-29; a 09:00 event that day
     # must get +02:00, not "today's" offset from whenever the agent runs.
-    assert _cal_endpoint("2026-03-29T09:00") == {"dateTime": "2026-03-29T09:00+02:00"}
+    assert _cal_endpoint("2026-03-29T09:00") == {"dateTime": "2026-03-29T09:00:00+02:00"}
 
 
 def test_cal_endpoint_naive_datetime_on_autumn_dst_day_gets_cet():
-    assert _cal_endpoint("2026-10-25T09:00") == {"dateTime": "2026-10-25T09:00+01:00"}
+    assert _cal_endpoint("2026-10-25T09:00") == {"dateTime": "2026-10-25T09:00:00+01:00"}
+
+
+def test_cal_endpoint_adds_seconds_rfc3339_requires():
+    # documented input format is HH:MM (no seconds); RFC3339 requires them
+    # once the offset is attached, so they must be filled in.
+    assert _cal_endpoint("2026-11-03T09:00") == {"dateTime": "2026-11-03T09:00:00+01:00"}
+
+
+def test_cal_endpoint_keeps_seconds_the_model_already_supplied():
+    assert _cal_endpoint("2026-11-03T09:00:30") == {"dateTime": "2026-11-03T09:00:30+01:00"}
 
 
 def test_cal_endpoint_trusts_an_offset_the_model_already_supplied():
@@ -134,8 +150,32 @@ def test_calendar_create_normalises_naive_start_end_per_event_date():
     cal = FakeCal()
     calendar_create(cal, "spring event", "2026-03-29T09:00", "2026-03-29T10:00", source="chat")
     body = cal.events().inserted
-    assert body["start"] == {"dateTime": "2026-03-29T09:00+02:00"}
-    assert body["end"] == {"dateTime": "2026-03-29T10:00+02:00"}
+    assert body["start"] == {"dateTime": "2026-03-29T09:00:00+02:00"}
+    assert body["end"] == {"dateTime": "2026-03-29T10:00:00+02:00"}
+
+
+def test_calendar_update_requires_source():
+    with pytest.raises(ToolError):
+        calendar_update(FakeCal(), "e1", source="")  # V3
+
+
+def test_calendar_update_normalises_naive_start_end_per_event_date():
+    # Same DST fix as calendar_create must apply to the update path: a naive
+    # local datetime on the other side of a DST change from "now" must get
+    # that date's own offset, not a bare dateTime with no offset at all.
+    cal = FakeCal()
+    calendar_update(cal, "e1", source="chat", start="2026-03-29T09:00", end="2026-03-29T10:00")
+    body = cal.events().patched
+    assert body["start"] == {"dateTime": "2026-03-29T09:00:00+02:00"}
+    assert body["end"] == {"dateTime": "2026-03-29T10:00:00+02:00"}
+
+
+def test_calendar_update_leaves_start_end_untouched_when_omitted():
+    cal = FakeCal()
+    calendar_update(cal, "e1", source="chat", summary="renamed")
+    body = cal.events().patched
+    assert "start" not in body and "end" not in body
+    assert body["summary"] == "renamed"
 
 
 def test_build_tools_flags_and_schema():

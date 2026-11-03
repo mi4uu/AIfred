@@ -111,21 +111,26 @@ def calendar_list(service, time_min: str, time_max: str, max_results: int = 20, 
 
 
 _OFFSET_SUFFIX = re.compile(r"(Z|[+-]\d{2}:\d{2})$")
-_LOCAL_DATETIME = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})")
+_LOCAL_DATETIME = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$")
 
 
 def _ensure_offset(value: str) -> str:
     """Attach the correct UTC offset to a naive local 'date T time' string
     (no Z/+HH:MM suffix), resolved for that exact local moment rather than
     today's offset, so a model-supplied datetime on the other side of a DST
-    change from "now" still lands correct (V35 follow-up)."""
+    change from "now" still lands correct (V35 follow-up).
+
+    Also normalises to full RFC3339 by filling in a ':00' seconds component
+    when the input omits it, since the documented input format (HH:MM) is
+    otherwise not valid RFC3339 once the offset is attached.
+    """
     if _OFFSET_SUFFIX.search(value):
         return value  # model already gave an offset, trust it as-is
     m = _LOCAL_DATETIME.match(value)
     if not m:
         return value
-    date, hm = m.groups()
-    return value + offset_for_datetime(date, hm)
+    date, hm, ss = m.groups()
+    return f"{date}T{hm}:{ss or '00'}{offset_for_datetime(date, hm)}"
 
 
 def _cal_endpoint(value: str) -> dict:
@@ -161,9 +166,9 @@ def calendar_update(
     if summary is not None:
         patch["summary"] = summary
     if start is not None:
-        patch["start"] = {"dateTime": start}
+        patch["start"] = _cal_endpoint(start)
     if end is not None:
-        patch["end"] = {"dateTime": end}
+        patch["end"] = _cal_endpoint(end)
     patch["description"] = f"[aifred source: {source}]"
     e = service.events().patch(calendarId=calendar_id, eventId=event_id, body=patch).execute()
     return {"id": e.get("id"), "summary": e.get("summary")}
