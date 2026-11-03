@@ -123,6 +123,27 @@ def test_inbox_refs_survive_a_restart_without_duplicating(tmp_path):
     s.close()
 
 
+def test_refresh_drops_legacy_chat_refs_without_duplicating():
+    """Regression: before 1c883a8, chat refs ended in a decimal hash()
+    suffix. 'chat' isn't in MUTABLE, so an already-running instance would
+    keep that old row forever while the fix re-embeds the same turn under a
+    new sha1 ref, duplicating every pre-existing chat snippet in recall()."""
+    s = Store(":memory:")
+    sid = s.create_session(ts=1.0)
+    s.add_chat_message(sid, "user", "kup mleko po pracy", ts=1.0)
+    # simulate a pre-fix row: old hash()-based ref for the exact same turn
+    legacy_ref = f"chat:{sid}:1.0:1234"
+    s.add_embedding(legacy_ref, "chat", "user: kup mleko po pracy", pack([1.0, 0, 0, 0, 0, 0]), 1.0)
+    idx = RagIndex(s, FakeEmbedder(), contacts=FakeContacts())
+    idx.refresh()
+    chat_rows = [r for r in s.all_embeddings() if r["source"] == "chat"]
+    assert len(chat_rows) == 1                   # legacy row pruned, one sha1-ref row remains
+    assert len(chat_rows[0]["ref"].rsplit(":", 1)[-1]) == 10
+    hits = idx.recall("mleko", k=5, sources=["chat"])
+    assert len(hits) == 1                         # no permanent duplicate
+    s.close()
+
+
 def test_recall_source_filter():
     s = Store(":memory:")
     _seed(s)

@@ -82,8 +82,23 @@ class RagIndex:
                                 "chat", _clip(f"{m['role']}: {body}"), float(m.get("ts", 0) or 0)))
         return out
 
+    # ---- one-off migration: drop pre-sha1 chat refs (V33) ----
+    def _prune_legacy_chat_refs(self) -> int:
+        """'chat' isn't in MUTABLE, so refresh() never re-checks its refs.
+        Before 1c883a8, chat refs ended in a decimal hash() suffix instead of
+        the 10-char sha1 digest _stable_id() now uses; those rows would
+        otherwise sit next to the freshly re-embedded sha1 ref forever and
+        recall() would return every pre-existing chat turn twice."""
+        legacy = {r for r in self.store.refs_for_source("chat") if len(r.rsplit(":", 1)[-1]) != 10}
+        if not legacy:
+            return 0
+        n = self.store.delete_embeddings(legacy)
+        log.info("rag: dropped %s legacy (pre-sha1) chat refs", n)
+        return n
+
     # ---- incremental embed + prune (re-sync with brain.md edits, V32) ----
     def refresh(self) -> int:
+        self._prune_legacy_chat_refs()
         cands = self._candidates()
         # prune mutable sources (e.g. inbox) so edited/deleted lines drop their vectors
         by_source: dict[str, set[str]] = {}

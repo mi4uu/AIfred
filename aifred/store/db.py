@@ -301,6 +301,16 @@ class Store:
     def all_embeddings(self) -> list[sqlite3.Row]:
         return self._query("SELECT ref,source,text,vec,ts FROM embeddings")
 
+    def refs_for_source(self, source: str) -> set[str]:
+        return {r["ref"] for r in self._query("SELECT ref FROM embeddings WHERE source=?", (source,))}
+
+    def delete_embeddings(self, refs: set[str]) -> int:
+        if not refs:
+            return 0
+        with self._tx() as c:
+            c.executemany("DELETE FROM embeddings WHERE ref=?", [(r,) for r in refs])
+        return len(refs)
+
     def prune_embeddings(self, source: str, keep_refs: set[str]) -> int:
         """Drop rows for a MUTABLE source whose ref is no longer present (handles
         edits/deletions in brain.md done by the owner or another agent, V32)."""
