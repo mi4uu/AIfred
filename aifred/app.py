@@ -14,6 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from aifred.action_journal import ActionJournal, merge_key_if_supported
 from aifred.agent.loop import AgentLoop
 from aifred.agent.router import IntentRouter
 from aifred.config import Settings, get_settings
@@ -80,6 +81,7 @@ class Runtime:
     llm: LLMClient
     registry: ToolRegistry
     confirm: ConfirmManager
+    journal: ActionJournal
     agent: AgentLoop
     brain: BrainMD | None = None
     bot: TelegramBot | None = None
@@ -310,11 +312,31 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
         owner_phone=s.owner_whatsapp, brain=brain,
     )
 
-    confirm = ConfirmManager(mode="ask")
+    confirm = ConfirmManager(mode="ask", ttl_seconds=s.confirm_ttl_seconds)
+
+    # crash-safe side-effecting calls (see action_journal.py): reconcile BEFORE
+    # the agent runs, so a journal row left "started" by a crash on the last
+    # run is retried once (or surfaced as unresolved) before anything new can
+    # be approved.
+    journal = ActionJournal(store)
+
+    def _reconcile_handler(name: str):
+        tool = registry.get(name)
+
+        def call(args: dict, key: str):
+            return registry.dispatch(name, merge_key_if_supported(tool.parameters, args, key))
+
+        return call
+
+    reconcile_report = journal.reconcile(tools={name: _reconcile_handler(name) for name in registry.names()})
+    if reconcile_report:
+        log.warning("action journal: reconciled %d leftover entr%s from a prior run: %s",
+                    len(reconcile_report), "y" if len(reconcile_report) == 1 else "ies", reconcile_report)
+
     router = IntentRouter(registry)
     agent = AgentLoop(
         llm=llm, registry=registry, router=router,
-        system_prompt=SYSTEM_PROMPT, confirm=confirm.hook,
+        system_prompt=SYSTEM_PROMPT, confirm=confirm.hook, journal=journal,
     )
 
     bot: TelegramBot | None = None
@@ -345,7 +367,7 @@ def build_runtime(settings: Settings | None = None) -> Runtime:
 
     log.info("aifred runtime: %s | tools=%s", status, registry.names())
     return Runtime(
-        settings=s, store=store, llm=llm, registry=registry, confirm=confirm,
+        settings=s, store=store, llm=llm, registry=registry, confirm=confirm, journal=journal,
         agent=agent, brain=brain, bot=bot, whatsapp=wa, contacts=contacts,
         triage=triage, calendar=calendar_service, drive=drive_service, rag=rag, status=status,
     )

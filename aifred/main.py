@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aifred import __version__
+from aifred.action_journal import ActionJournal
 from aifred.config import get_settings
 from aifred.confirm import ConfirmManager
 from aifred.webapi import make_api
@@ -24,6 +25,7 @@ def create_app(
     store: Any | None = None,
     triage: Any | None = None,
     contacts: Any | None = None,
+    journal: ActionJournal | None = None,
 ) -> FastAPI:
     s = get_settings()
     app = FastAPI(title="AIfred", version=__version__)
@@ -45,7 +47,9 @@ def create_app(
         return get_settings().public_dict()  # V8 redacted
 
     if agent is not None:
-        app.include_router(make_api(agent, confirm or ConfirmManager(), s.web_token, whatsapp, store, triage, contacts))
+        app.include_router(
+            make_api(agent, confirm or ConfirmManager(), s.web_token, whatsapp, store, triage, contacts, journal)
+        )
 
     # serve the built bun/vite/Radix UI if present (web/dist), so :9120 serves UI + API
     import os

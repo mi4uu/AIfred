@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from aifred.action_journal import ActionJournal, merge_key_if_supported
 from aifred.agent.router import IntentRouter
 from aifred.llm.client import LLMClient
 from aifred.tools.base import ToolError
@@ -44,6 +45,7 @@ class AgentLoop:
     system_prompt: str = DEFAULT_SYSTEM
     max_iters: int = 6
     confirm: ConfirmHook = field(default=_deny)
+    journal: ActionJournal | None = None  # crash-safe side-effecting calls (None = old direct-call behavior)
 
     def run(self, user_message: str, history: list[dict] | None = None, on_step=None) -> dict:
         """on_step(event, detail) optional, emits 'thinking'/'tool'/'done' for SSE."""
@@ -95,6 +97,10 @@ class AgentLoop:
         if tool.side_effecting and not self.confirm(name, args):  # V7
             return "DENIED: side-effecting action not confirmed"
         try:
+            if tool.side_effecting and self.journal is not None:
+                key = self.journal.new_key()
+                call_args = merge_key_if_supported(tool.parameters, args, key)
+                return self.journal.run(key, name, args, lambda: tool.run(call_args))
             return tool.run(args)
         except ToolError as e:
             return f"ERROR {e}"  # V9 fail loud, loop continues

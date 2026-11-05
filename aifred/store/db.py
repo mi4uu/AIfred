@@ -91,6 +91,18 @@ CREATE TABLE IF NOT EXISTS proposals (
     created_ts REAL NOT NULL DEFAULT 0
 );
 
+-- durable action journal, crash-safe side-effecting tool calls (see action_journal.py)
+CREATE TABLE IF NOT EXISTS action_journal (
+    idempotency_key TEXT PRIMARY KEY,
+    tool            TEXT NOT NULL,
+    args            TEXT NOT NULL,                  -- JSON
+    status          TEXT NOT NULL DEFAULT 'started', -- started | done | failed
+    result          TEXT,                            -- JSON, set once status != started
+    created_ts      REAL NOT NULL,
+    finished_ts     REAL
+);
+CREATE INDEX IF NOT EXISTS idx_journal_status ON action_journal(status);
+
 CREATE TABLE IF NOT EXISTS sessions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     title       TEXT NOT NULL DEFAULT 'New chat',
@@ -450,3 +462,37 @@ class Store:
         with self._tx() as c:
             c.execute("DELETE FROM chat_messages WHERE session_id=?", (session_id,))
             c.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+
+    # --- action journal (crash-safe side-effecting tool calls, see action_journal.py) ---
+    def journal_start(self, key: str, tool: str, args: dict[str, Any], ts: float) -> bool:
+        """Record intent before the action runs. Returns False if this key was
+        already journaled (a prior attempt, possibly interrupted by a crash)."""
+        with self._tx() as c:
+            cur = c.execute(
+                "INSERT OR IGNORE INTO action_journal(idempotency_key,tool,args,status,created_ts) "
+                "VALUES(?,?,?,'started',?)",
+                (key, tool, json.dumps(args), ts),
+            )
+            return cur.rowcount > 0
+
+    def journal_finish(self, key: str, result: Any, ts: float) -> None:
+        with self._tx() as c:
+            c.execute(
+                "UPDATE action_journal SET status='done', result=?, finished_ts=? WHERE idempotency_key=?",
+                (json.dumps(result, default=str), ts, key),
+            )
+
+    def journal_fail(self, key: str, error: str, ts: float) -> None:
+        with self._tx() as c:
+            c.execute(
+                "UPDATE action_journal SET status='failed', result=?, finished_ts=? WHERE idempotency_key=?",
+                (json.dumps({"error": error}), ts, key),
+            )
+
+    def journal_get(self, key: str) -> sqlite3.Row | None:
+        rows = self._query("SELECT * FROM action_journal WHERE idempotency_key=?", (key,))
+        return rows[0] if rows else None
+
+    def journal_unfinished(self) -> list[sqlite3.Row]:
+        """Rows left 'started' by a crash between intent and completion."""
+        return self._query("SELECT * FROM action_journal WHERE status='started' ORDER BY created_ts")

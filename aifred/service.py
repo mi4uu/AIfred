@@ -216,7 +216,7 @@ def run_service() -> None:  # pragma: no cover (entrypoint)
         log.info("whatsapp enabled but not paired, open the web UI to scan the QR")
 
     app = create_app(agent=rt.agent, confirm=rt.confirm, whatsapp=rt.whatsapp, store=rt.store,
-                     triage=rt.triage, contacts=rt.contacts)
+                     triage=rt.triage, contacts=rt.contacts, journal=rt.journal)
     uvicorn.run(app, host=s.web_host, port=s.web_port, log_level="info")
 
 

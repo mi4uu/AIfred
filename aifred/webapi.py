@@ -21,7 +21,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from aifred.confirm import ConfirmManager
+from aifred.action_journal import ActionJournal, merge_key_if_supported
+from aifred.confirm import ConfirmExpiredError, ConfirmManager
 from aifred.tools.base import ToolError
 
 HEARTBEAT_S = 10  # SSE keep-alive ping interval (defeats proxy idle timeout)
@@ -59,6 +60,7 @@ def make_api(
     store: Any | None = None,
     triage: Any | None = None,
     contacts: Any | None = None,
+    journal: ActionJournal | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api")
 
@@ -169,7 +171,13 @@ def make_api(
     # ---- confirm (V7) ----
     @router.get("/pending", dependencies=[Depends(auth)])
     def pending() -> dict:
-        return {"pending": [p.__dict__ for p in confirm.list_pending()]}
+        # drop anything past its ttl first, so the owner is told what expired
+        # rather than tapping a token that quietly 404s
+        expired = confirm.cleanup_expired()
+        return {
+            "pending": [p.__dict__ for p in confirm.list_pending()],
+            "expired": [{"token": p.token, "tool": p.tool} for p in expired],
+        }
 
     @router.post("/confirm", dependencies=[Depends(auth)])
     def do_confirm(body: ConfirmIn) -> dict:
@@ -177,6 +185,8 @@ def make_api(
             p = confirm.approve(body.token)
         except KeyError:
             raise HTTPException(status_code=404, detail="unknown token") from None
+        except ConfirmExpiredError as e:
+            raise HTTPException(status_code=410, detail=str(e)) from None
         if not body.approve:
             return {"status": "rejected", "tool": p.tool}
         if body.always:
@@ -185,7 +195,17 @@ def make_api(
         if registry is None:
             return {"status": "approved", "tool": p.tool, "result": None}
         try:
-            result = registry.dispatch(p.tool, p.args)  # run the exact approved args, once (V7)
+            if journal is not None:
+                # journaled: survives a crash between the side effect landing
+                # and this response being recorded as done (see action_journal.py)
+                key = journal.new_key()
+                call_args = p.args
+                get_tool = getattr(registry, "get", None)
+                if get_tool is not None:
+                    call_args = merge_key_if_supported(get_tool(p.tool).parameters, p.args, key)
+                result = journal.run(key, p.tool, p.args, lambda: registry.dispatch(p.tool, call_args))
+            else:
+                result = registry.dispatch(p.tool, p.args)  # run the exact approved args, once (V7)
         except ToolError as e:
             return {"status": "approved", "tool": p.tool, "error": str(e)}
         return {"status": "approved", "tool": p.tool, "result": result}
