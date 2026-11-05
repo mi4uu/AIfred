@@ -4,6 +4,7 @@ import json
 
 from fastapi.testclient import TestClient
 
+from aifred.action_journal import ActionJournal
 from aifred.confirm import ConfirmManager
 from aifred.main import create_app
 from aifred.store.db import Store
@@ -47,20 +48,29 @@ def test_auth_required_when_token_set(monkeypatch):
     get_settings.cache_clear()
 
 
+class FakeTool:
+    def __init__(self, parameters):
+        self.parameters = parameters
+
+
 class FakeRegistry:
     """Records dispatch calls, like ToolRegistry but no real tools needed."""
 
-    def __init__(self):
+    def __init__(self, tool_parameters=None):
         self.calls = []
+        self._tool_parameters = tool_parameters or {}
 
     def dispatch(self, name, args):
         self.calls.append((name, args))
         return {"ok": True, "echo": args}
 
+    def get(self, name):
+        return FakeTool(self._tool_parameters.get(name, {"properties": {}}))
+
 
 class FakeAgentWithRegistry(FakeAgent):
-    def __init__(self):
-        self.registry = FakeRegistry()
+    def __init__(self, registry=None):
+        self.registry = registry or FakeRegistry()
 
 
 def test_confirm_approve_executes_the_exact_pending_args_once():
@@ -104,6 +114,63 @@ def test_confirm_reject_does_not_dispatch():
     assert r.status_code == 200 and r.json()["status"] == "rejected"
     assert fake_agent.registry.calls == []
     assert "calendar_create" not in cm.preauth
+
+
+def test_confirm_expired_token_returns_410():
+    now = [1_000_000.0]
+    cm = ConfirmManager(mode="ask", ttl_seconds=60, clock=lambda: now[0])
+    cm.hook("calendar_create", {"summary": "x"})
+    token = cm.list_pending()[0].token
+    now[0] += 61  # past ttl
+    fake_agent = FakeAgentWithRegistry()
+    app = create_app(agent=fake_agent, confirm=cm)
+    c = TestClient(app)
+    r = c.post("/api/confirm", json={"token": token, "approve": True})
+    assert r.status_code == 410
+    assert fake_agent.registry.calls == []
+
+
+def test_pending_lists_expired_tokens():
+    now = [1_000_000.0]
+    cm = ConfirmManager(mode="ask", ttl_seconds=60, clock=lambda: now[0])
+    cm.hook("calendar_create", {"summary": "x"})
+    token = cm.list_pending()[0].token
+    now[0] += 61  # past ttl
+    app = create_app(agent=FakeAgentWithRegistry(), confirm=cm)
+    c = TestClient(app)
+    r = c.get("/api/pending")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pending"] == []
+    assert body["expired"] == [{"token": token, "tool": "calendar_create"}]
+
+
+def test_confirm_approve_with_journal_dispatches_and_records_done(tmp_path):
+    cm = ConfirmManager(mode="ask")
+    cm.hook("calendar_create", {"summary": "x"})
+    token = cm.list_pending()[0].token
+    registry = FakeRegistry(tool_parameters={"calendar_create": {"properties": {"idempotency_key": {}}}})
+    fake_agent = FakeAgentWithRegistry(registry=registry)
+    store = Store(str(tmp_path / "j.db"))
+    journal = ActionJournal(store)
+    app = create_app(agent=fake_agent, confirm=cm, journal=journal)
+    c = TestClient(app)
+    r = c.post("/api/confirm", json={"token": token, "approve": True})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "approved"
+    # dispatched exactly once, with the idempotency key merged into the args
+    assert len(registry.calls) == 1
+    call_name, call_args = registry.calls[0]
+    assert call_name == "calendar_create"
+    assert call_args["summary"] == "x"
+    key = call_args["idempotency_key"]
+    assert body["result"] == {"ok": True, "echo": call_args}
+    # journaled as done under that same key, so a crash retry wouldn't repeat it
+    row = store.journal_get(key)
+    assert row is not None
+    assert row["status"] == "done"
+    store.close()
 
 
 def test_no_api_when_no_agent():
