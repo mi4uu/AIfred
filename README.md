@@ -92,6 +92,14 @@ AIfred does not send mail (no send scope exists) and has no tool to message a th
 
 Cloud fallback (`AIFRED_CLOUD_FALLBACK_ENABLED`) is off by default; the model, your mail, and your WhatsApp history stay on your machine unless you turn it on. That's separate from Telegram itself: if you use the Telegram channel at all, your messages and AIfred's replies there necessarily pass through Telegram's own servers, not just your machine. Telegram access is gated to an allowed-users list.
 
+### Safety guarantees
+
+Three properties the confirm/execute path is built to hold, each backed by tests that simulate the failure directly rather than just exercising the happy path:
+
+- **A pending confirmation expires.** An "ask" prompt (`ConfirmManager`, `aifred/confirm.py`) stops being approvable after `AIFRED_CONFIRM_TTL_SECONDS` (default 15 min); approving an expired token raises `ConfirmExpiredError` and the action never runs. See `tests/test_confirm.py::test_approving_an_expired_confirmation_is_refused_and_never_runs`, `::test_expired_confirmations_are_cleaned_up_and_reported`.
+- **A crash never duplicates or drops an approved action.** Every side-effecting call runs through a durable action journal (`aifred/action_journal.py`, backed by the same sqlite `Store`): intent is recorded before the call, completion after. If AIfred dies in between, restart retries that one entry exactly once; the external system is expected to dedupe on the idempotency key it's handed (`merge_key_if_supported`), so the retry doesn't create a second real side effect. See `tests/test_action_journal.py::test_crash_after_side_effect_before_marked_done_does_not_duplicate_on_restart` and `::test_crash_before_execution_is_retried_not_lost_on_restart`.
+- **A denied cross-user/cross-folder access attempt is refused, not worked around.** Enforced at the memory layer by [brain.md](https://github.com/mi4uu/brain.md), which this project depends on for storage of notes, journal, and contacts; see that project's own tests.
+
 ## Development
 
 ```bash

@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     web_port: int = Field(default=9120, alias="AIFRED_WEB_PORT")
     web_token: str = Field(default="", alias="AIFRED_WEB_TOKEN")  # if set, required on /api/*
 
+    # confirm layer (I.web, T15): how long an "ask" pending confirmation stays approvable
+    confirm_ttl_seconds: int = Field(default=900, alias="AIFRED_CONFIRM_TTL_SECONDS")
+
     # secret keys, used to redact in public surfaces (V8)
     _SECRET_FIELDS = (
         "openrouter_api_key",
